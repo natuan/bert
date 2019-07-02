@@ -204,6 +204,12 @@ class DataProcessor(object):
       return lines
 
 
+class JobProcessor(DataProcessor):
+  """
+  Processor for Scout's jobs
+  """
+  pass
+
 class XnliProcessor(DataProcessor):
   """Processor for the XNLI data set."""
 
@@ -979,3 +985,4 @@ if __name__ == "__main__":
   flags.mark_flag_as_required("bert_config_file")
   flags.mark_flag_as_required("output_dir")
   tf.app.run()
+
