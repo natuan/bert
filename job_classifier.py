@@ -1,19 +1,3 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""BERT finetuning runner."""
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -26,29 +10,22 @@ import optimization
 import tokenization
 import tensorflow as tf
 
+import numpy as np
+import pandas as pd
+import myutils
+from session import get_session_info
+
+BERT_BASE_DIR = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
+config = get_session_info()
+
 flags = tf.flags
 
 FLAGS = flags.FLAGS
 
 ## Required parameters
-flags.DEFINE_string(
-    "data_dir", None,
-    "The input data dir. Should contain the .tsv files (or other data files) "
-    "for the task.")
 
 flags.DEFINE_string(
-    "bert_config_file", None,
-    "The config json file corresponding to the pre-trained BERT model. "
-    "This specifies the model architecture.")
-
-flags.DEFINE_string("task_name", None, "The name of the task to train.")
-
-flags.DEFINE_string("vocab_file", None,
-                    "The vocabulary file that the BERT model was trained on.")
-
-flags.DEFINE_string(
-    "output_dir", None,
-    "The output directory where the model checkpoints will be written.")
+    "session", None, "The session name.")
 
 ## Other parameters
 
@@ -174,53 +151,18 @@ class InputFeatures(object):
     self.is_real_example = is_real_example
 
 
-class DataProcessor(object):
-  """Base class for data converters for sequence classification data sets."""
-
-  def get_train_examples(self, data_dir):
-    """Gets a collection of `InputExample`s for the train set."""
-    raise NotImplementedError()
-
-  def get_dev_examples(self, data_dir):
-    """Gets a collection of `InputExample`s for the dev set."""
-    raise NotImplementedError()
-
-  def get_test_examples(self, data_dir):
-    """Gets a collection of `InputExample`s for prediction."""
-    raise NotImplementedError()
-
-  def get_labels(self):
-    """Gets the list of labels for this data set."""
-    raise NotImplementedError()
-
-  @classmethod
-  def _read_tsv(cls, input_file, quotechar=None):
-    """Reads a tab separated value file."""
-    with tf.gfile.Open(input_file, "r") as f:
-      reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
-      lines = []
-      for line in reader:
-        lines.append(line)
-      return lines
-
-
-class JobProcessor(DataProcessor):
+class JobProcessor:
   """
   Processor for Scout's jobs
   """
-  pass
-
-class XnliProcessor(DataProcessor):
-  """Processor for the XNLI data set."""
-
-  def __init__(self):
-    self.language = "zh"
-
-  def get_train_examples(self, data_dir):
-    """See base class."""
+  
+  def get_train_examples(self):
+    train_file_path = os.path.join(session['session_dir'], 'train.csv')
+    df = pd.read_csv('train.csv')
+    
     lines = self._read_tsv(
-        os.path.join(data_dir, "multinli",
-                     "multinli.train.%s.tsv" % self.language))
+      os.path.join(data_dir, "multinli",
+                   "multinli.train.%s.tsv" % self.language))
     examples = []
     for (i, line) in enumerate(lines):
       if i == 0:
@@ -231,11 +173,11 @@ class XnliProcessor(DataProcessor):
       label = tokenization.convert_to_unicode(line[2])
       if label == tokenization.convert_to_unicode("contradictory"):
         label = tokenization.convert_to_unicode("contradiction")
-      examples.append(
+        examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
 
-  def get_dev_examples(self, data_dir):
+  def get_dev_examples(self):
     """See base class."""
     lines = self._read_tsv(os.path.join(data_dir, "xnli.dev.tsv"))
     examples = []
@@ -250,134 +192,14 @@ class XnliProcessor(DataProcessor):
       text_b = tokenization.convert_to_unicode(line[7])
       label = tokenization.convert_to_unicode(line[1])
       examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+        InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
 
   def get_labels(self):
-    """See base class."""
-    return ["contradiction", "entailment", "neutral"]
-
-
-class MnliProcessor(DataProcessor):
-  """Processor for the MultiNLI data set (GLUE version)."""
-
-  def get_train_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
-
-  def get_dev_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "dev_matched.tsv")),
-        "dev_matched")
-
-  def get_test_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "test_matched.tsv")), "test")
-
-  def get_labels(self):
-    """See base class."""
-    return ["contradiction", "entailment", "neutral"]
-
-  def _create_examples(self, lines, set_type):
-    """Creates examples for the training and dev sets."""
-    examples = []
-    for (i, line) in enumerate(lines):
-      if i == 0:
-        continue
-      guid = "%s-%s" % (set_type, tokenization.convert_to_unicode(line[0]))
-      text_a = tokenization.convert_to_unicode(line[8])
-      text_b = tokenization.convert_to_unicode(line[9])
-      if set_type == "test":
-        label = "contradiction"
-      else:
-        label = tokenization.convert_to_unicode(line[-1])
-      examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-    return examples
-
-
-class MrpcProcessor(DataProcessor):
-  """Processor for the MRPC data set (GLUE version)."""
-
-  def get_train_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
-
-  def get_dev_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
-
-  def get_test_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
-
-  def get_labels(self):
-    """See base class."""
-    return ["0", "1"]
-
-  def _create_examples(self, lines, set_type):
-    """Creates examples for the training and dev sets."""
-    examples = []
-    for (i, line) in enumerate(lines):
-      if i == 0:
-        continue
-      guid = "%s-%s" % (set_type, i)
-      text_a = tokenization.convert_to_unicode(line[3])
-      text_b = tokenization.convert_to_unicode(line[4])
-      if set_type == "test":
-        label = "0"
-      else:
-        label = tokenization.convert_to_unicode(line[0])
-      examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-    return examples
-
-
-class ColaProcessor(DataProcessor):
-  """Processor for the CoLA data set (GLUE version)."""
-
-  def get_train_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
-
-  def get_dev_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
-
-  def get_test_examples(self, data_dir):
-    """See base class."""
-    return self._create_examples(
-        self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
-
-  def get_labels(self):
-    """See base class."""
-    return ["0", "1"]
-
-  def _create_examples(self, lines, set_type):
-    """Creates examples for the training and dev sets."""
-    examples = []
-    for (i, line) in enumerate(lines):
-      # Only the test set has a header
-      if set_type == "test" and i == 0:
-        continue
-      guid = "%s-%s" % (set_type, i)
-      if set_type == "test":
-        text_a = tokenization.convert_to_unicode(line[1])
-        label = "0"
-      else:
-        text_a = tokenization.convert_to_unicode(line[3])
-        label = tokenization.convert_to_unicode(line[1])
-      examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-    return examples
+    train_file_path = os.path.join(config['session_dir'], 'train.csv')
+    df = pd.read_csv(train_file_path)
+    level1_ids = np.unique(df['level1_id'].values)
+    return level1_ids
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
@@ -786,24 +608,21 @@ def convert_examples_to_features(examples, label_list, max_seq_length,
   return features
 
 
+
 def main(_):
+
   tf.logging.set_verbosity(tf.logging.INFO)
 
-  processors = {
-      "cola": ColaProcessor,
-      "mnli": MnliProcessor,
-      "mrpc": MrpcProcessor,
-      "xnli": XnliProcessor,
-  }
-
+  init_checkpoint = os.path.join(BERT_BASE_DIR, 'bert_model.ckpt')
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
-                                                FLAGS.init_checkpoint)
+                                                init_checkpoint)
 
   if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
     raise ValueError(
         "At least one of `do_train`, `do_eval` or `do_predict' must be True.")
 
-  bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
+  bert_config_file = os.path.join(BERT_BASE_DIR, 'bert_config.json')
+  bert_config = modeling.BertConfig.from_json_file(bert_config_file)
 
   if FLAGS.max_seq_length > bert_config.max_position_embeddings:
     raise ValueError(
@@ -811,30 +630,24 @@ def main(_):
         "was only trained up to sequence length %d" %
         (FLAGS.max_seq_length, bert_config.max_position_embeddings))
 
-  tf.gfile.MakeDirs(FLAGS.output_dir)
+  output_dir = os.path.join(config['session_dir'], 'outputs')
+  tf.gfile.MakeDirs(output_dir)
 
-  task_name = FLAGS.task_name.lower()
-
-  if task_name not in processors:
-    raise ValueError("Task not found: %s" % (task_name))
-
-  processor = processors[task_name]()
+  import pdb; pdb.set_trace()
+  
+  processor = JobProcessor()
 
   label_list = processor.get_labels()
 
+  vocab_file = os.path.join(BERT_BASE_DIR, 'vocab.txt')
   tokenizer = tokenization.FullTokenizer(
-      vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
-
-  tpu_cluster_resolver = None
-  if FLAGS.use_tpu and FLAGS.tpu_name:
-    tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-        FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+      vocab_file=vocab_file, do_lower_case=FLAGS.do_lower_case)
 
   is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
       master=FLAGS.master,
-      model_dir=FLAGS.output_dir,
+      model_dir=output_dir,
       save_checkpoints_steps=FLAGS.save_checkpoints_steps,
       tpu_config=tf.contrib.tpu.TPUConfig(
           iterations_per_loop=FLAGS.iterations_per_loop,
@@ -845,7 +658,7 @@ def main(_):
   num_train_steps = None
   num_warmup_steps = None
   if FLAGS.do_train:
-    train_examples = processor.get_train_examples(FLAGS.data_dir)
+    train_examples = processor.get_train_examples()
     num_train_steps = int(
         len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
     num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
@@ -853,7 +666,7 @@ def main(_):
   model_fn = model_fn_builder(
       bert_config=bert_config,
       num_labels=len(label_list),
-      init_checkpoint=FLAGS.init_checkpoint,
+      init_checkpoint=init_checkpoint,
       learning_rate=FLAGS.learning_rate,
       num_train_steps=num_train_steps,
       num_warmup_steps=num_warmup_steps,
@@ -871,7 +684,7 @@ def main(_):
       predict_batch_size=FLAGS.predict_batch_size)
 
   if FLAGS.do_train:
-    train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
+    train_file = os.path.join(output_dir, "train.tf_record")
     file_based_convert_examples_to_features(
         train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
     tf.logging.info("***** Running training *****")
@@ -886,7 +699,7 @@ def main(_):
     estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
   if FLAGS.do_eval:
-    eval_examples = processor.get_dev_examples(FLAGS.data_dir)
+    eval_examples = processor.get_dev_examples()
     num_actual_eval_examples = len(eval_examples)
     if FLAGS.use_tpu:
       # TPU requires a fixed batch size for all batches, therefore the number
@@ -897,7 +710,7 @@ def main(_):
       while len(eval_examples) % FLAGS.eval_batch_size != 0:
         eval_examples.append(PaddingInputExample())
 
-    eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
+    eval_file = os.path.join(output_dir, "eval.tf_record")
     file_based_convert_examples_to_features(
         eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
 
@@ -924,7 +737,7 @@ def main(_):
 
     result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
 
-    output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
+    output_eval_file = os.path.join(output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
       for key in sorted(result.keys()):
@@ -942,7 +755,7 @@ def main(_):
       while len(predict_examples) % FLAGS.predict_batch_size != 0:
         predict_examples.append(PaddingInputExample())
 
-    predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+    predict_file = os.path.join(output_dir, "predict.tf_record")
     file_based_convert_examples_to_features(predict_examples, label_list,
                                             FLAGS.max_seq_length, tokenizer,
                                             predict_file)
@@ -962,7 +775,7 @@ def main(_):
 
     result = estimator.predict(input_fn=predict_input_fn)
 
-    output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
+    output_predict_file = os.path.join(output_dir, "test_results.tsv")
     with tf.gfile.GFile(output_predict_file, "w") as writer:
       num_written_lines = 0
       tf.logging.info("***** Predict results *****")
@@ -979,10 +792,6 @@ def main(_):
 
 
 if __name__ == "__main__":
-  flags.mark_flag_as_required("data_dir")
-  flags.mark_flag_as_required("task_name")
-  flags.mark_flag_as_required("vocab_file")
-  flags.mark_flag_as_required("bert_config_file")
-  flags.mark_flag_as_required("output_dir")
+  flags.mark_flag_as_required("session")
   tf.app.run()
 
