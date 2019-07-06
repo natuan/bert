@@ -12,11 +12,35 @@ import tensorflow as tf
 
 import numpy as np
 import pandas as pd
-import myutils
 from session import get_session_info
 
-BERT_BASE_DIR = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
+
+##################### CONFIGURATION FOR JOB CLASSIFICATION #####################
 config = get_session_info()
+
+DEBUGGING = False
+
+BERT_BASE_DIR = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
+
+OUTPUT_DROPOUT = 0.1    # Default: 0.1
+
+MAX_SEQ_LENGTH = 512    # Default: 128
+
+TRAIN_BATCH_SIZE = 6    # Default: 32
+EVAL_BATCH_SIZE = 6     # Default: 8
+PREDICT_BATCH_SIZE = 6  # Default: 8
+
+LEARNING_RATE = 5e-5    # Default: 5e-5
+
+NUM_TRAIN_EPOCHS = 3.0  # Default: 3.0
+
+WARMUP_PROPOTION = 0.1  # Default: 0.1
+
+SAVE_CHECKPOINTS_STEPS = 1000  # Default: 1000
+
+ITERATIONS_PER_LOOP = 1000  # Default: 1000
+
+#################################################################################
 
 flags = tf.flags
 
@@ -39,7 +63,7 @@ flags.DEFINE_bool(
     "models and False for cased models.")
 
 flags.DEFINE_integer(
-    "max_seq_length", 128,
+    "max_seq_length", MAX_SEQ_LENGTH,
     "The maximum total input sequence length after WordPiece tokenization. "
     "Sequences longer than this will be truncated, and sequences shorter "
     "than this will be padded.")
@@ -52,15 +76,15 @@ flags.DEFINE_bool(
     "do_predict", False,
     "Whether to run the model in inference mode on the test set.")
 
-flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
+flags.DEFINE_integer("train_batch_size", TRAIN_BATCH_SIZE, "Total batch size for training.")
 
-flags.DEFINE_integer("eval_batch_size", 8, "Total batch size for eval.")
+flags.DEFINE_integer("eval_batch_size", EVAL_BATCH_SIZE, "Total batch size for eval.")
 
-flags.DEFINE_integer("predict_batch_size", 8, "Total batch size for predict.")
+flags.DEFINE_integer("predict_batch_size", PREDICT_BATCH_SIZE, "Total batch size for predict.")
 
-flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
+flags.DEFINE_float("learning_rate", LEARNING_RATE, "The initial learning rate for Adam.")
 
-flags.DEFINE_float("num_train_epochs", 3.0,
+flags.DEFINE_float("num_train_epochs", NUM_TRAIN_EPOCHS,
                    "Total number of training epochs to perform.")
 
 flags.DEFINE_float(
@@ -68,10 +92,10 @@ flags.DEFINE_float(
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
 
-flags.DEFINE_integer("save_checkpoints_steps", 1000,
+flags.DEFINE_integer("save_checkpoints_steps", SAVE_CHECKPOINTS_STEPS,
                      "How often to save the model checkpoint.")
 
-flags.DEFINE_integer("iterations_per_loop", 1000,
+flags.DEFINE_integer("iterations_per_loop", ITERATIONS_PER_LOOP,
                      "How many steps to make in each estimator call.")
 
 flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
@@ -155,51 +179,41 @@ class JobProcessor:
   """
   Processor for Scout's jobs
   """
-  
+
   def get_train_examples(self):
-    train_file_path = os.path.join(session['session_dir'], 'train.csv')
-    df = pd.read_csv('train.csv')
-    
-    lines = self._read_tsv(
-      os.path.join(data_dir, "multinli",
-                   "multinli.train.%s.tsv" % self.language))
-    examples = []
-    for (i, line) in enumerate(lines):
-      if i == 0:
-        continue
-      guid = "train-%d" % (i)
-      text_a = tokenization.convert_to_unicode(line[0])
-      text_b = tokenization.convert_to_unicode(line[1])
-      label = tokenization.convert_to_unicode(line[2])
-      if label == tokenization.convert_to_unicode("contradictory"):
-        label = tokenization.convert_to_unicode("contradiction")
-        examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-    return examples
+    return self._get_examples('train')
 
   def get_dev_examples(self):
-    """See base class."""
-    lines = self._read_tsv(os.path.join(data_dir, "xnli.dev.tsv"))
-    examples = []
-    for (i, line) in enumerate(lines):
-      if i == 0:
-        continue
-      guid = "dev-%d" % (i)
-      language = tokenization.convert_to_unicode(line[0])
-      if language != tokenization.convert_to_unicode(self.language):
-        continue
-      text_a = tokenization.convert_to_unicode(line[6])
-      text_b = tokenization.convert_to_unicode(line[7])
-      label = tokenization.convert_to_unicode(line[1])
-      examples.append(
-        InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
-    return examples
+    return self._get_examples('dev')
+
+  def get_test_examples(self):
+    return self._get_examples('test')
 
   def get_labels(self):
     train_file_path = os.path.join(config['session_dir'], 'train.csv')
     df = pd.read_csv(train_file_path)
     level1_ids = np.unique(df['level1_id'].values)
     return level1_ids
+
+  def _get_examples(self, set_type='train'):
+    assert set_type in {'train', 'dev', 'test'}
+    csv_file_path = os.path.join(config['session_dir'], f'{set_type}.csv')
+    df = pd.read_csv(csv_file_path)
+
+    if DEBUGGING:
+      print('DEBUGGING _get_examples >>>>>>>>>>>>>>')
+      df = df.iloc[:500]
+      print('<<<<<<<<<<<<<<<<<<<<<<<<')
+    
+    examples = []
+    for job_id, job_text, level1_id in zip(df['job_id'], df['job_text'], df['level1_id']):
+      guid = f'train-{job_id}'
+      text_a = tokenization.convert_to_unicode(job_text)
+      text_b = None
+      label = level1_id
+      examples.append(
+          InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+    return examples
 
 
 def convert_single_example(ex_index, example, label_list, max_seq_length,
@@ -428,8 +442,8 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   with tf.variable_scope("loss"):
     if is_training:
-      # I.e., 0.1 dropout
-      output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
+      # Dropout
+      output_layer = tf.nn.dropout(output_layer, keep_prob=(1.0 - OUTPUT_DROPOUT))
 
     logits = tf.matmul(output_layer, output_weights, transpose_b=True)
     logits = tf.nn.bias_add(logits, output_bias)
@@ -633,8 +647,6 @@ def main(_):
   output_dir = os.path.join(config['session_dir'], 'outputs')
   tf.gfile.MakeDirs(output_dir)
 
-  import pdb; pdb.set_trace()
-  
   processor = JobProcessor()
 
   label_list = processor.get_labels()
@@ -643,6 +655,11 @@ def main(_):
   tokenizer = tokenization.FullTokenizer(
       vocab_file=vocab_file, do_lower_case=FLAGS.do_lower_case)
 
+  tpu_cluster_resolver = None
+  if FLAGS.use_tpu and FLAGS.tpu_name:
+    tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
+        FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
+  
   is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
@@ -737,15 +754,17 @@ def main(_):
 
     result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
 
+    import pdb; pdb.set_trace()
+    
     output_eval_file = os.path.join(output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
       for key in sorted(result.keys()):
         tf.logging.info("  %s = %s", key, str(result[key]))
         writer.write("%s = %s\n" % (key, str(result[key])))
-
+  
   if FLAGS.do_predict:
-    predict_examples = processor.get_test_examples(FLAGS.data_dir)
+    predict_examples = processor.get_test_examples()
     num_actual_predict_examples = len(predict_examples)
     if FLAGS.use_tpu:
       # TPU requires a fixed batch size for all batches, therefore the number
@@ -775,6 +794,8 @@ def main(_):
 
     result = estimator.predict(input_fn=predict_input_fn)
 
+    import pdb; pdb.set_trace()
+    
     output_predict_file = os.path.join(output_dir, "test_results.tsv")
     with tf.gfile.GFile(output_predict_file, "w") as writer:
       num_written_lines = 0

@@ -1,4 +1,5 @@
 import pandas as pd
+from tqdm import tqdm
 
 
 def load_job_classification_dataset():
@@ -12,11 +13,11 @@ def load_job_classification_dataset():
     return dataset
 
 
-def get_job_texts(job_ids, delimiter, text_cleaner=None):
+def get_job_texts(job_ids, delimiter='¥', text_cleaner=None):
     dataset = load_job_classification_dataset()
     dataset = dataset.set_index('job_id')
     texts = [''] * len(job_ids)
-    for idx, job_id in enumerate(job_ids):
+    for idx, job_id in enumerate(tqdm(job_ids, 'Getting job texts')):
         title = dataset.loc[job_id]['title']
         desc = dataset.loc[job_id]['description']
         if text_cleaner:
