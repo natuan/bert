@@ -1,0 +1,12 @@
+*** JUL 08 ***
+- With max seq len = 512, experimented different training batch size 6, 8, 10, 12, and we can only increase it to 10 without OOM error.
+
+- After every SAVE_CHECKPOINTS_STEPS, the evaluation is also done in addition to the current model being saved. Since we have about 4k evaluation data points, we want to eval after the learning is performed about at least every 4k data points, or about 4k/training_batch_size steps.
+
+*** JUL 09 ***
+
+- Try seq len 256, batch size 16: results is worse than 512/10 on drop 0.1
+
+- Try BERT large: seq 256, batch 2 --- result seems not promising (DEBUGGING on)
+
+

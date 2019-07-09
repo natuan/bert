@@ -1,3 +1,7 @@
 
 Using BERT for movie data
 https://colab.research.google.com/github/google-research/bert/blob/master/predicting_movie_reviews_with_bert_on_tf_hub.ipynb#scrollTo=dsBo6RCtQmwx
+
+
+Train and evaluate with tensorboard
+https://medium.com/@tijmenlv/an-advanced-example-of-tensorflow-estimators-part-1-3-c9ffba3bff03
