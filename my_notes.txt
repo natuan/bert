@@ -1,3 +1,5 @@
+>>>>>>>>>>>>>>>>>>>  SESSION: JUL06 <<<<<<<<<<<<<<<<<<<<<
+
 *** JUL 08 ***
 - With max seq len = 512, experimented different training batch size 6, 8, 10, 12, and we can only increase it to 10 without OOM error.
 
@@ -9,4 +11,29 @@
 
 - Try BERT large: seq 256, batch 2 --- result seems not promising (DEBUGGING on)
 
+- "train_jul09_drop01": retrain drop 0.1 because yesterday it was done with only 3 epochs, and then the checkpoint was picked up to continue but the result seems having dis-countinuity.
 
+Overfit happened after 2 epochs (i.e. 2k steps) (however although loss increases, accuracy still increases) --- log loss of training set 0.75, of dev 0.28
+
+- outputs_train_jul09_drop004: drop 0.04 so that 1 neuron is randomly dropped. Same LR and all other params as train_jul09_drop01.
+
+- train_jul09_drop01_b: drop 0.1, 5e-6 LR, ran 15 epochs. This LR is 10x smaller than the default 5-e5 used so far.
+
+Starts to overfit at around 10k steps --- the log loss of training set is around 0.5, of dev set is about 0.7 <== much smaller gap compared to the gap from train_jul09_drop01
+
+|0.5 - 0.7| vs |0.2 - 0.7|
+
+- train_jul09_drop02: drop 0.2, LR 3e-6 (smaller than 5e-6 used above). Ran 20 epochs.
+
+*** JUL 10 ***
+
+- train_jul09_drop03: as above, but drop 0.3
+
+- train_jul10_drop04: as above, but drop 0.4
+
+*** JUL 11 ***
+
+- train_jul11_drop05_lr05e-5_pw-decay: LR 5e-5 first 2k steps, then 5e-6 --- better than outputs_train_jul08_drop05 which used only 5e-5
+
+
+>>>>>>>>>>>>>>>>>>>  SESSION: ??? <<<<<<<<<<<<<<<<<<<<<

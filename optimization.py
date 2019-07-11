@@ -22,20 +22,33 @@ import re
 import tensorflow as tf
 
 
-def create_optimizer(loss, init_lr, num_train_steps, num_warmup_steps, use_tpu):
+def create_optimizer(loss, init_lr, lr_decay_config,
+                     num_warmup_steps, use_tpu):
   """Creates an optimizer training op."""
   global_step = tf.train.get_or_create_global_step()
 
   learning_rate = tf.constant(value=init_lr, shape=[], dtype=tf.float32)
 
-  # Implements linear decay of the learning rate.
-  learning_rate = tf.train.polynomial_decay(
-      learning_rate,
+  if lr_decay_config['name'] == 'polynomial_decay':
+    assert lr_decay_config['active'], 'Passed in decay strategy must be active'
+    # Implements linear decay of the learning rate.
+    learning_rate = tf.train.polynomial_decay(
+        learning_rate,
+        global_step,
+        decay_steps=lr_decay_config['decay_steps'],
+        end_learning_rate=lr_decay_config['end_learning_rate'],
+        power=lr_decay_config['power'],
+        cycle=lr_decay_config['cycle'])
+
+  elif lr_decay_config['name'] == 'piecewise_constant_decay':
+    assert lr_decay_config['active'], 'Passed in decay strategy must be active'
+    learning_rate = tf.train.piecewise_constant_decay(
       global_step,
-      num_train_steps,
-      end_learning_rate=0.0,
-      power=1.0,
-      cycle=False)
+      boundaries=lr_decay_config['boundaries'],
+      values=lr_decay_config['values'])
+  else:
+    raise ValueError('Unknown learning rate decay')
+
 
   # Implements linear warmup. I.e., if global_step < num_warmup_steps, the
   # learning rate will be `global_step/num_warmup_steps * init_lr`.

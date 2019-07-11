@@ -21,13 +21,13 @@ config = get_session_info()
 
 training_config = {}
 
-training_config['TRAINING_SESSION_NAME'] = 'train_jul09_drop01'
+training_config['TRAINING_SESSION_NAME'] = 'train_jul11_drop05_lr05e-5_pw-decay_b'
 
 training_config['DEBUGGING'] = False
 
 training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
 
-training_config['OUTPUT_DROPOUT'] = 0.1    # Default: 0.1
+training_config['OUTPUT_DROPOUT'] = 0.5    # Default: 0.1
 
 training_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
 
@@ -37,7 +37,7 @@ training_config['PREDICT_BATCH_SIZE'] = 8  # Default: 8
 
 training_config['LEARNING_RATE'] = 5e-5    # Default: 5e-5
 
-training_config['NUM_TRAIN_EPOCHS'] = 5.0  # Default: 3.0
+training_config['NUM_TRAIN_EPOCHS'] = 4.0  # Default: 3.0
 
 training_config['WARMUP_PROPOTION'] = 0.1  # Default: 0.1
 
@@ -50,6 +50,18 @@ training_config['ITERATIONS_PER_LOOP'] = 1000  # Default: 1000
 training_config['SHUFFLE_BUFFER_SIZE'] = 10099  # Equal the training set size
 
 training_config['INIT_CHECKPOINT'] = None
+
+training_config['LR_POLY_DECAY'] = {'name': 'polynomial_decay',
+                                    'active': False,
+                                    'decay_steps': None,  # TO BE UPDATED
+                                    'end_learning_rate': 0.0,
+                                    'power': 1.0,
+                                    'cycle': False}
+
+training_config['LR_PIECEWISE_CONST_DECAY'] = {'name': 'piecewise_constant_decay',
+                                               'active': True,
+                                               'boundaries': [2400],
+                                               'values': [5e-5, 2e-5]}
 
 #################################################################################
 
@@ -471,7 +483,7 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
-                     num_train_steps, num_warmup_steps, use_tpu,
+                     lr_decay_config, num_warmup_steps, use_tpu,
                      use_one_hot_embeddings):
   """Returns `model_fn` closure for TPUEstimator."""
 
@@ -526,7 +538,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     if mode == tf.estimator.ModeKeys.TRAIN:
 
       train_op = optimization.create_optimizer(
-          total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
+          total_loss, learning_rate, lr_decay_config, num_warmup_steps, use_tpu)
 
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode,
@@ -560,79 +572,6 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     return output_spec
 
   return model_fn
-
-
-# This function is not used by this file but is still used by the Colab and
-# people who depend on it.
-def input_fn_builder(features, seq_length, is_training, drop_remainder):
-  """Creates an `input_fn` closure to be passed to TPUEstimator."""
-
-  all_input_ids = []
-  all_input_mask = []
-  all_segment_ids = []
-  all_label_ids = []
-
-  for feature in features:
-    all_input_ids.append(feature.input_ids)
-    all_input_mask.append(feature.input_mask)
-    all_segment_ids.append(feature.segment_ids)
-    all_label_ids.append(feature.label_id)
-
-  def input_fn(params):
-    """The actual input function."""
-    batch_size = params["batch_size"]
-
-    num_examples = len(features)
-
-    # This is for demo purposes and does NOT scale to large data sets. We do
-    # not use Dataset.from_generator() because that uses tf.py_func which is
-    # not TPU compatible. The right way to load data is with TFRecordReader.
-    d = tf.data.Dataset.from_tensor_slices({
-        "input_ids":
-            tf.constant(
-                all_input_ids, shape=[num_examples, seq_length],
-                dtype=tf.int32),
-        "input_mask":
-            tf.constant(
-                all_input_mask,
-                shape=[num_examples, seq_length],
-                dtype=tf.int32),
-        "segment_ids":
-            tf.constant(
-                all_segment_ids,
-                shape=[num_examples, seq_length],
-                dtype=tf.int32),
-        "label_ids":
-            tf.constant(all_label_ids, shape=[num_examples], dtype=tf.int32),
-    })
-
-    if is_training:
-      d = d.repeat()
-      d = d.shuffle(buffer_size=100)
-
-    d = d.batch(batch_size=batch_size, drop_remainder=drop_remainder)
-    return d
-
-  return input_fn
-
-
-# This function is not used by this file but is still used by the Colab and
-# people who depend on it.
-def convert_examples_to_features(examples, label_list, max_seq_length,
-                                 tokenizer):
-  """Convert a set of `InputExample`s to a list of `InputFeatures`."""
-
-  features = []
-  for (ex_index, example) in enumerate(examples):
-    if ex_index % 10000 == 0:
-      tf.logging.info("Writing example %d of %d" % (ex_index, len(examples)))
-
-    feature = convert_single_example(ex_index, example, label_list,
-                                     max_seq_length, tokenizer)
-
-    features.append(feature)
-  return features
-
 
 
 def main(_):
@@ -694,12 +633,23 @@ def main(_):
     len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
   num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
+  lr_decay_config = None
+  if training_config['LR_POLY_DECAY']['active']:
+    training_config['LR_POLY_DECAY']['decay_steps'] = num_train_steps
+    lr_decay_config = training_config['LR_POLY_DECAY']
+  elif training_config['LR_PIECEWISE_CONST_DECAY']['active']:
+    assert training_config['LR_PIECEWISE_CONST_DECAY']['values'][0] == \
+      training_config['LEARNING_RATE']
+    lr_decay_config = training_config['LR_PIECEWISE_CONST_DECAY']
+  else:
+    assert False, 'Must specify a decay strategy'
+  
   model_fn = model_fn_builder(
       bert_config=bert_config,
       num_labels=len(label_list),
       init_checkpoint=init_checkpoint,
       learning_rate=FLAGS.learning_rate,
-      num_train_steps=num_train_steps,
+      lr_decay_config=lr_decay_config,
       num_warmup_steps=num_warmup_steps,
       use_tpu=FLAGS.use_tpu,
       use_one_hot_embeddings=FLAGS.use_tpu)
