@@ -21,11 +21,14 @@ config = get_session_info()
 
 training_config = {}
 
-training_config['TRAINING_SESSION_NAME'] = 'train_jul11_drop05_lr05e-5_pw-decay_b'
+training_config['TRAINING_SESSION_NAME'] = 'drop05_lr03e-5'
 
 training_config['DEBUGGING'] = False
 
 training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
+
+training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
+#training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL06/outputs_train_jul10_drop05_lr03e-5/model.ckpt-9600.index'
 
 training_config['OUTPUT_DROPOUT'] = 0.5    # Default: 0.1
 
@@ -35,9 +38,9 @@ training_config['TRAIN_BATCH_SIZE'] = 10   # max_seq_length 512: train_batch_siz
 training_config['EVAL_BATCH_SIZE'] = 8     # Default: 8
 training_config['PREDICT_BATCH_SIZE'] = 8  # Default: 8
 
-training_config['LEARNING_RATE'] = 5e-5    # Default: 5e-5
+training_config['LEARNING_RATE'] = 3e-5    # Default: 5e-5
 
-training_config['NUM_TRAIN_EPOCHS'] = 4.0  # Default: 3.0
+training_config['NUM_TRAIN_EPOCHS'] = 10.0  # Default: 3.0
 
 training_config['WARMUP_PROPOTION'] = 0.1  # Default: 0.1
 
@@ -49,19 +52,17 @@ training_config['ITERATIONS_PER_LOOP'] = 1000  # Default: 1000
 
 training_config['SHUFFLE_BUFFER_SIZE'] = 10099  # Equal the training set size
 
-training_config['INIT_CHECKPOINT'] = None
-
 training_config['LR_POLY_DECAY'] = {'name': 'polynomial_decay',
-                                    'active': False,
+                                    'active': True,
                                     'decay_steps': None,  # TO BE UPDATED
                                     'end_learning_rate': 0.0,
                                     'power': 1.0,
                                     'cycle': False}
 
 training_config['LR_PIECEWISE_CONST_DECAY'] = {'name': 'piecewise_constant_decay',
-                                               'active': True,
-                                               'boundaries': [2400],
-                                               'values': [5e-5, 2e-5]}
+                                               'active': False,
+                                               'boundaries': [2000, 3500],
+                                               'values': [5e-5, 5e-6, 5e-7]}
 
 #################################################################################
 
@@ -222,15 +223,10 @@ class JobProcessor:
     assert set_type in {'train', 'dev', 'test'}
     csv_file_path = os.path.join(config['session_dir'], f'{set_type}.csv')
     df = pd.read_csv(csv_file_path)
-
-    if training_config['DEBUGGING']:
-      print('DEBUGGING _get_examples >>>>>>>>>>>>>>')
-      df = df.iloc[:5000]
-      print('<<<<<<<<<<<<<<<<<<<<<<<<')
     
     examples = []
     for job_id, job_text, level1_id in zip(df['job_id'], df['job_text'], df['level1_id']):
-      guid = f'train-{job_id}'
+      guid = job_id
       text_a = tokenization.convert_to_unicode(job_text)
       text_b = None
       label = level1_id
@@ -574,13 +570,42 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
   return model_fn
 
 
+def predict(estimator, examples, label_list, idx2label, tokenizer,
+            output_tf_record_file_path,
+            output_predicted_class_file_path):
+  file_based_convert_examples_to_features(examples, label_list,
+                                          FLAGS.max_seq_length, tokenizer,
+                                          output_tf_record_file_path)
+  predict_input_fn = file_based_input_fn_builder(
+      input_file=output_tf_record_file_path,
+      seq_length=FLAGS.max_seq_length,
+      is_training=False,
+      drop_remainder=False)
+  result = estimator.predict(input_fn=predict_input_fn)
+  job_id = []
+  label = []
+  predicted_label = []
+
+  for (idx, prediction) in enumerate(result):
+    job_id.append(examples[idx].guid)
+    label.append(examples[idx].label)
+    probs = prediction['probabilities']
+    predicted = idx2label[np.argmax(probs)]
+    assert 1 <= predicted <= 26
+    predicted_label.append(predicted)
+
+  df = pd.DataFrame(data={'job_id': job_id,
+                          'predicted_label': predicted_label,
+                          'label': label})
+  df.to_csv(output_predicted_class_file_path, index=False)
+
+
 def main(_):
 
   tf.logging.set_verbosity(tf.logging.INFO)
 
-  init_checkpoint = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
-                                                init_checkpoint)
+                                                FLAGS.init_checkpoint)
 
   if not FLAGS.do_train and not FLAGS.do_eval and not FLAGS.do_predict:
     raise ValueError(
@@ -596,18 +621,19 @@ def main(_):
         (FLAGS.max_seq_length, bert_config.max_position_embeddings))
 
   output_dir = os.path.join(config['session_dir'], f"outputs_{training_config['TRAINING_SESSION_NAME']}")
-  assert not os.path.exists(output_dir)
-  tf.gfile.MakeDirs(output_dir)
+  if FLAGS.do_train:
+    assert not os.path.exists(output_dir)
+    tf.gfile.MakeDirs(output_dir)
 
   train_config_file_path = os.path.join(output_dir, 'training_config.json')
   with open(train_config_file_path, 'w') as f:
     json.dump(training_config, f)
 
-
   processor = JobProcessor()
 
   label_list = processor.get_labels()
-
+  idx2label = {idx: label for idx, label in enumerate(label_list)}
+  
   vocab_file = os.path.join(training_config['BERT_BASE_DIR'], 'vocab.txt')
   tokenizer = tokenization.FullTokenizer(
       vocab_file=vocab_file, do_lower_case=FLAGS.do_lower_case)
@@ -643,11 +669,11 @@ def main(_):
     lr_decay_config = training_config['LR_PIECEWISE_CONST_DECAY']
   else:
     assert False, 'Must specify a decay strategy'
-  
+
   model_fn = model_fn_builder(
       bert_config=bert_config,
       num_labels=len(label_list),
-      init_checkpoint=init_checkpoint,
+      init_checkpoint=FLAGS.init_checkpoint,
       learning_rate=FLAGS.learning_rate,
       lr_decay_config=lr_decay_config,
       num_warmup_steps=num_warmup_steps,
@@ -664,57 +690,64 @@ def main(_):
       eval_batch_size=FLAGS.eval_batch_size,
       predict_batch_size=FLAGS.predict_batch_size)
 
-  # Set up training spec
-  train_file = os.path.join(output_dir, "train.tf_record")
-  file_based_convert_examples_to_features(
-      train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
+  if FLAGS.do_train:
+    # Set up training spec
+    train_file = os.path.join(output_dir, "train.tf_record")
+    file_based_convert_examples_to_features(
+        train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
 
-  train_input_fn = file_based_input_fn_builder(
-      input_file=train_file,
+    train_input_fn = file_based_input_fn_builder(
+        input_file=train_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=True,
+        drop_remainder=True)
+    train_spec = tf.estimator.TrainSpec(
+      input_fn=train_input_fn,
+      max_steps=num_train_steps)
+
+    # Set up evaluation spec
+    eval_examples = processor.get_dev_examples()
+    eval_file = os.path.join(output_dir, "eval.tf_record")
+    file_based_convert_examples_to_features(
+      eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
+
+    eval_input_fn = file_based_input_fn_builder(
+      input_file=eval_file,
       seq_length=FLAGS.max_seq_length,
-      is_training=True,
-      drop_remainder=True)
-  train_spec = tf.estimator.TrainSpec(
-    input_fn=train_input_fn,
-    max_steps=num_train_steps)
+      is_training=False,
+      drop_remainder=False)
 
-  # Set up evaluation spec
-  eval_examples = processor.get_dev_examples()
-  eval_file = os.path.join(output_dir, "eval.tf_record")
-  file_based_convert_examples_to_features(
-    eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
-  
-  eval_input_fn = file_based_input_fn_builder(
-    input_file=eval_file,
-    seq_length=FLAGS.max_seq_length,
-    is_training=False,
-    drop_remainder=False)
+    eval_summary_hook = tf.train.SummarySaverHook(
+      save_steps=100,  ## TODO: Why 100?
+      output_dir=output_dir,
+      scaffold=tf.train.Scaffold(summary_op=tf.summary.merge_all()))
 
-  eval_summary_hook = tf.train.SummarySaverHook(
-    save_steps=100,
-    output_dir=output_dir,
-    scaffold=tf.train.Scaffold(summary_op=tf.summary.merge_all()))
-  
-  eval_spec = tf.estimator.EvalSpec(
-    input_fn=eval_input_fn,
-    hooks=[eval_summary_hook],
-    steps=len(eval_examples) / FLAGS.eval_batch_size,
-    start_delay_secs=10,
-    throttle_secs=120)
-  
+    eval_spec = tf.estimator.EvalSpec(
+      input_fn=eval_input_fn,
+      hooks=[eval_summary_hook],
+      steps=len(eval_examples) / FLAGS.eval_batch_size,
+      start_delay_secs=10,
+      throttle_secs=120)
 
-  tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+
+    tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
+
+  if FLAGS.do_eval:
+    predict_examples = processor.get_dev_examples()
+    output_tf_record_file_path = os.path.join(output_dir, 'dev.tf_record')
+    output_predicted_label_file_path = os.path.join(output_dir, 'dev_predict.csv')
+    predict(estimator, predict_examples, label_list, idx2label, tokenizer,
+            output_tf_record_file_path, output_predicted_label_file_path)
+    
 
   if FLAGS.do_predict:
     predict_examples = processor.get_test_examples()
+    output_tf_record_file_path = os.path.join(output_dir, 'test.tf_record')
+    output_predicted_label_file_path = os.path.join(output_dir, 'test_predict.csv')
+    predict(estimator, predict_examples, label_list, idx2label, tokenizer,
+            output_tf_record_file_path, output_predicted_label_file_path)
+
     num_actual_predict_examples = len(predict_examples)
-    if FLAGS.use_tpu:
-      # TPU requires a fixed batch size for all batches, therefore the number
-      # of examples must be a multiple of the batch size, or else examples
-      # will get dropped. So we pad with fake examples which are ignored
-      # later on.
-      while len(predict_examples) % FLAGS.predict_batch_size != 0:
-        predict_examples.append(PaddingInputExample())
 
     predict_file = os.path.join(output_dir, "predict.tf_record")
     file_based_convert_examples_to_features(predict_examples, label_list,
@@ -735,7 +768,6 @@ def main(_):
         drop_remainder=predict_drop_remainder)
 
     result = estimator.predict(input_fn=predict_input_fn)
-    
     output_predict_file = os.path.join(output_dir, "test_results.tsv")
     with tf.gfile.GFile(output_predict_file, "w") as writer:
       num_written_lines = 0

@@ -12,7 +12,7 @@ from text_cleaner import TextCleaner
 
 ROOT_DIR = os.path.join('/', 'home', 'tnguyen', 'src', 'bert')
 
-SESSION = 'JUL06'
+SESSION = 'JUL12_A'
 SESSION_DIR = os.path.join(ROOT_DIR, SESSION)
 
 CLEANER_CONFIG = {'punctuation': True,
@@ -25,7 +25,7 @@ DELIMITER = '¥'
 
 TEST_SIZE = 0.2
 DEV_SIZE = 0.2
-SEED = 0
+SEED = 2019
 
 
 def make_session():
