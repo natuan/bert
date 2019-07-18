@@ -12,12 +12,12 @@ from text_cleaner import TextCleaner
 
 ROOT_DIR = os.path.join('/', 'home', 'tnguyen', 'src', 'bert')
 
-SESSION = 'JUL12_A'
+SESSION = 'JUL17_B'
 SESSION_DIR = os.path.join(ROOT_DIR, SESSION)
 
 CLEANER_CONFIG = {'punctuation': True,
                   'alphabetic': True,
-                  'stop_words': False,
+                  'stop_words': True,
                   'stem_words': False,
                   'state_city': False}
 
@@ -25,7 +25,8 @@ DELIMITER = '¥'
 
 TEST_SIZE = 0.2
 DEV_SIZE = 0.2
-SEED = 2019
+STRATIFIED = True
+SEED = 12345
 
 
 def make_session():
@@ -82,6 +83,7 @@ def get_session_info():
             'delimiter': DELIMITER,
             'test_size': TEST_SIZE,
             'dev_size': DEV_SIZE,
+            'stratified': STRATIFIED,
             'seed': SEED}
 
 
@@ -97,14 +99,21 @@ def _create_train_dev_test_job_ids(dev_size=0.2, test_size=0.2, random_state=0):
 
     assert test_size > 0.0
     assert 0.0 < dev_size + test_size <= 0.5
+    config = get_session_info()
     dataset = load_job_classification_dataset()
     X = dataset['job_id']
     y = dataset['level1_id']
     dev_test_size = dev_size + test_size
-    X_train, X_dev_test, y_train, y_dev_test = train_test_split(X, y,
+
+    strat_y = y if config['stratified'] else None
+    X_train, X_dev_test, y_train, y_dev_test = train_test_split(X, y, stratify=strat_y,
                                                                 test_size=dev_test_size,
                                                                 random_state=random_state)
-    X_dev, X_test, y_dev, y_test = train_test_split(X_dev_test, y_dev_test, test_size=test_size/dev_test_size,
+
+    strat_y_dev_test = y_dev_test if config['stratified'] else None
+    X_dev, X_test, y_dev, y_test = train_test_split(X_dev_test, y_dev_test,
+                                                    stratify=strat_y_dev_test,
+                                                    test_size=test_size/dev_test_size,
                                                     random_state=2*random_state)
     assert len(set(X_train.tolist()) & set(X_dev.tolist())) == 0
     assert len(set(X_dev.tolist()) & set(X_test.tolist())) == 0

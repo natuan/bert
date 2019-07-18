@@ -21,16 +21,17 @@ config = get_session_info()
 
 training_config = {}
 
-training_config['TRAINING_SESSION_NAME'] = 'drop05_lr03e-5'
+training_config['TRAINING_SESSION_NAME'] = 'drop04_lr05e-5_steps10'
 
 training_config['DEBUGGING'] = False
 
 training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
 
 training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
+
 #training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL06/outputs_train_jul10_drop05_lr03e-5/model.ckpt-9600.index'
 
-training_config['OUTPUT_DROPOUT'] = 0.5    # Default: 0.1
+training_config['OUTPUT_DROPOUT'] = 0.4    # Default: 0.1
 
 training_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
 
@@ -38,11 +39,13 @@ training_config['TRAIN_BATCH_SIZE'] = 10   # max_seq_length 512: train_batch_siz
 training_config['EVAL_BATCH_SIZE'] = 8     # Default: 8
 training_config['PREDICT_BATCH_SIZE'] = 8  # Default: 8
 
-training_config['LEARNING_RATE'] = 3e-5    # Default: 5e-5
+training_config['LEARNING_RATE'] = 5e-5    # Default: 5e-5
 
 training_config['NUM_TRAIN_EPOCHS'] = 10.0  # Default: 3.0
 
 training_config['WARMUP_PROPOTION'] = 0.1  # Default: 0.1
+
+training_config['LABEL_SMOOTHING'] = 0.1
 
 # The evaluation will also be done every of the below checkpoint steps
 # I chose 4000 because it's about the number of development data points
@@ -223,7 +226,10 @@ class JobProcessor:
     assert set_type in {'train', 'dev', 'test'}
     csv_file_path = os.path.join(config['session_dir'], f'{set_type}.csv')
     df = pd.read_csv(csv_file_path)
-    
+
+    if training_config['DEBUGGING']:
+      df = df.iloc[:500]
+
     examples = []
     for job_id, job_text, level1_id in zip(df['job_id'], df['job_text'], df['level1_id']):
       guid = job_id
@@ -572,6 +578,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
 def predict(estimator, examples, label_list, idx2label, tokenizer,
             output_tf_record_file_path,
+            output_predicted_probs_file_path,
             output_predicted_class_file_path):
   file_based_convert_examples_to_features(examples, label_list,
                                           FLAGS.max_seq_length, tokenizer,
@@ -585,7 +592,7 @@ def predict(estimator, examples, label_list, idx2label, tokenizer,
   job_id = []
   label = []
   predicted_label = []
-
+  predicted_probs = []
   for (idx, prediction) in enumerate(result):
     job_id.append(examples[idx].guid)
     label.append(examples[idx].label)
@@ -594,10 +601,21 @@ def predict(estimator, examples, label_list, idx2label, tokenizer,
     assert 1 <= predicted <= 26
     predicted_label.append(predicted)
 
+    a = probs.tolist()
+    a.insert(0, examples[idx].guid)
+    predicted_probs.append(a)
+
   df = pd.DataFrame(data={'job_id': job_id,
                           'predicted_label': predicted_label,
                           'label': label})
   df.to_csv(output_predicted_class_file_path, index=False)
+
+  columns = ['job_id']
+  for idx in range(25):
+    columns.append(idx2label[idx])
+
+  df = pd.DataFrame.from_records(data=predicted_probs, columns=columns)
+  df.to_csv(output_predicted_probs_file_path, index=False)
 
 
 def main(_):
@@ -733,13 +751,37 @@ def main(_):
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
   if FLAGS.do_eval:
-    predict_examples = processor.get_dev_examples()
-    output_tf_record_file_path = os.path.join(output_dir, 'dev.tf_record')
-    output_predicted_label_file_path = os.path.join(output_dir, 'dev_predict.csv')
-    predict(estimator, predict_examples, label_list, idx2label, tokenizer,
-            output_tf_record_file_path, output_predicted_label_file_path)
-    
+    # Training set
+    train_examples = processor.get_train_examples()
+    train_tf_record_file_path = os.path.join(output_dir, 'train.tf_record')
+    train_predicted_probs_file_path = os.path.join(output_dir, 'train_probs.csv')
+    train_predicted_label_file_path = os.path.join(output_dir, 'train_predict.csv')
+    predict(estimator, train_examples, label_list, idx2label, tokenizer,
+            train_tf_record_file_path,
+            train_predicted_probs_file_path,
+            train_predicted_label_file_path)
 
+    # Dev set
+    predict_examples = processor.get_dev_examples()
+    dev_tf_record_file_path = os.path.join(output_dir, 'dev.tf_record')
+    dev_predicted_probs_file_path = os.path.join(output_dir, 'dev_probs.csv')
+    dev_predicted_label_file_path = os.path.join(output_dir, 'dev_predict.csv')
+    predict(estimator, predict_examples, label_list, idx2label, tokenizer,
+            dev_tf_record_file_path,
+            dev_predicted_probs_file_path,
+            dev_predicted_label_file_path)
+
+    # Test set
+    predict_examples = processor.get_test_examples()
+    test_tf_record_file_path = os.path.join(output_dir, 'test.tf_record')
+    test_predicted_probs_file_path = os.path.join(output_dir, 'test_probs.csv')
+    test_predicted_label_file_path = os.path.join(output_dir, 'test_predict.csv')
+    predict(estimator, predict_examples, label_list, idx2label, tokenizer,
+            test_tf_record_file_path,
+            test_predicted_probs_file_path,
+            test_predicted_label_file_path)
+
+    
   if FLAGS.do_predict:
     predict_examples = processor.get_test_examples()
     output_tf_record_file_path = os.path.join(output_dir, 'test.tf_record')

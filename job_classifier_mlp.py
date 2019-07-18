@@ -21,20 +21,21 @@ config = get_session_info()
 
 training_config = {}
 
-training_config['TRAINING_SESSION_NAME'] = 'drop05_lr05e-5_pretrain_kaggle'
+training_config['TRAINING_SESSION_NAME'] = 'hidden20_drop05_05_lr05e-5'
 
 training_config['DEBUGGING'] = False
 
-#training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
-training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12_finetuned-kaggle')
+training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
 
-#training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
-
-training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'model.ckpt-3812')
+training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
 
 #training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL06/outputs_train_jul10_drop05_lr03e-5/model.ckpt-9600.index'
 
-training_config['OUTPUT_DROPOUT'] = 0.5    # Default: 0.1
+training_config['EXTRA_HIDDEN_NEURONS'] = 20
+
+training_config['EXTRA_HIDDEN_DROPOUT'] = 0.5
+
+training_config['BASE_OUTPUT_DROPOUT'] = 0.5    # Default: 0.1
 
 training_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
 
@@ -44,7 +45,7 @@ training_config['PREDICT_BATCH_SIZE'] = 8  # Default: 8
 
 training_config['LEARNING_RATE'] = 5e-5    # Default: 5e-5
 
-training_config['NUM_TRAIN_EPOCHS'] = 10.0  # Default: 3.0
+training_config['NUM_TRAIN_EPOCHS'] = 2.0  # Default: 3.0
 
 training_config['WARMUP_PROPOTION'] = 0.1  # Default: 0.1
 
@@ -227,6 +228,9 @@ class JobProcessor:
     assert set_type in {'train', 'dev', 'test'}
     csv_file_path = os.path.join(config['session_dir'], f'{set_type}.csv')
     df = pd.read_csv(csv_file_path)
+
+    if training_config['DEBUGGING']:
+      df = df.iloc[:500]
     
     examples = []
     for job_id, job_text, level1_id in zip(df['job_id'], df['job_text'], df['level1_id']):
@@ -437,6 +441,18 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
       tokens_b.pop()
 
 
+def _neuron_layer(X, n_neurons, name, activation=None):
+  n_inputs = int(X.get_shape()[1])
+  with tf.variable_scope(name):
+    W = tf.get_variable('weights', [n_inputs, n_neurons],
+                        initializer=tf.truncated_normal_initializer(stddev=0.02))
+    b = tf.get_variable('bias', [n_neurons], initializer=tf.zeros_initializer())
+    z = tf.matmul(X, W) + b
+    if activation == 'relu':
+      return tf.nn.relu(z)
+    else:
+      return z
+
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
                  labels, num_labels, use_one_hot_embeddings):
   """Creates a classification model."""
@@ -453,24 +469,20 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
   #
   # If you want to use the token-level output, use model.get_sequence_output()
   # instead.
-  output_layer = model.get_pooled_output()
+  base_output_layer = model.get_pooled_output()
+  if is_training:
+    base_output_layer = tf.nn.dropout(base_output_layer,
+                                      rate=training_config['BASE_OUTPUT_DROPOUT'])
 
-  hidden_size = output_layer.shape[-1].value
+  extra_hidden = _neuron_layer(base_output_layer, training_config['EXTRA_HIDDEN_NEURONS'],
+                               name='extra_hidden_01',
+                               activation='relu')
+  if is_training:
+    extra_hidden = tf.nn.dropout(extra_hidden,
+                                 rate=training_config['EXTRA_HIDDEN_DROPOUT'])
 
-  output_weights = tf.get_variable(
-      "output_weights", [num_labels, hidden_size],
-      initializer=tf.truncated_normal_initializer(stddev=0.02))
-
-  output_bias = tf.get_variable(
-      "output_bias", [num_labels], initializer=tf.zeros_initializer())
-
-  with tf.variable_scope("loss"):
-    if is_training:
-      # Dropout
-      output_layer = tf.nn.dropout(output_layer, keep_prob=(1.0 - training_config['OUTPUT_DROPOUT']))
-
-    logits = tf.matmul(output_layer, output_weights, transpose_b=True)
-    logits = tf.nn.bias_add(logits, output_bias)
+  logits = _neuron_layer(extra_hidden, num_labels, name='output')
+  with tf.variable_scope('cross-entropy'):
     probabilities = tf.nn.softmax(logits, axis=-1)
     log_probs = tf.nn.log_softmax(logits, axis=-1)
 
@@ -478,7 +490,6 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
-
     return (loss, per_example_loss, logits, probabilities)
 
 

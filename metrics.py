@@ -4,7 +4,7 @@ from session import get_session_info
 
 config = get_session_info()
 
-training_session_name = 'drop05_lr05e-5'
+training_session_name = 'drop04_lr05e-5_steps10'
 
 output_dir = os.path.join(config['session_dir'], f'outputs_{training_session_name}')
 
@@ -16,6 +16,7 @@ train_acc = len(train_df[train_df['predicted_label'] == train_df['label']]) / le
 dev_acc = len(dev_df[dev_df['predicted_label'] == dev_df['label']]) / len(dev_df)
 test_acc = len(test_df[test_df['predicted_label'] == test_df['label']]) / len(test_df)
 
+print(f'Session output: {output_dir}')
 print(f'Train accuracy: {train_acc}')
 print(f'Dev accuracy: {dev_acc}')
 print(f'Test accuracy: {test_acc}')
