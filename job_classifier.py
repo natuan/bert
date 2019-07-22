@@ -21,15 +21,19 @@ config = get_session_info()
 
 training_config = {}
 
-training_config['TRAINING_SESSION_NAME'] = 'drop04_lr05e-5_steps10'
+training_config['GLOBAL_SEED'] = 2019
+
+training_config['TRAINING_SESSION_NAME'] = 'drop04_lr03e-5_steps10_ls01'
 
 training_config['DEBUGGING'] = False
 
 training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
 
-training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
+#training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
 
-#training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL06/outputs_train_jul10_drop05_lr03e-5/model.ckpt-9600.index'
+training_config['CKPT_STEP'] = 8800
+
+training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL17_B/outputs_drop04_lr03e-5_steps10_ls01/model.ckpt-{}.index'.format(training_config['CKPT_STEP'])
 
 training_config['OUTPUT_DROPOUT'] = 0.4    # Default: 0.1
 
@@ -39,7 +43,7 @@ training_config['TRAIN_BATCH_SIZE'] = 10   # max_seq_length 512: train_batch_siz
 training_config['EVAL_BATCH_SIZE'] = 8     # Default: 8
 training_config['PREDICT_BATCH_SIZE'] = 8  # Default: 8
 
-training_config['LEARNING_RATE'] = 5e-5    # Default: 5e-5
+training_config['LEARNING_RATE'] = 3e-5    # Default: 5e-5
 
 training_config['NUM_TRAIN_EPOCHS'] = 10.0  # Default: 3.0
 
@@ -68,6 +72,8 @@ training_config['LR_PIECEWISE_CONST_DECAY'] = {'name': 'piecewise_constant_decay
                                                'values': [5e-5, 5e-6, 5e-7]}
 
 #################################################################################
+
+tf.random.set_random_seed(training_config['GLOBAL_SEED'])
 
 flags = tf.flags
 
@@ -477,10 +483,14 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     log_probs = tf.nn.log_softmax(logits, axis=-1)
 
     one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+    label_smoothing = training_config['LABEL_SMOOTHING']
+    if label_smoothing > 0:
+      smooth_positives = 1.0 - label_smoothing
+      smooth_negatives = label_smoothing / num_labels
+      one_hot_labels = one_hot_labels * smooth_positives + smooth_negatives
 
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
-
     return (loss, per_example_loss, logits, probabilities)
 
 
@@ -751,11 +761,14 @@ def main(_):
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
   if FLAGS.do_eval:
+    ckpt_step = training_config['CKPT_STEP']
     # Training set
     train_examples = processor.get_train_examples()
     train_tf_record_file_path = os.path.join(output_dir, 'train.tf_record')
-    train_predicted_probs_file_path = os.path.join(output_dir, 'train_probs.csv')
-    train_predicted_label_file_path = os.path.join(output_dir, 'train_predict.csv')
+    train_predicted_probs_file_path = os.path.join(output_dir,
+                                                   f'train_probs_{ckpt_step}.csv')
+    train_predicted_label_file_path = os.path.join(output_dir,
+                                                   f'train_predict_{ckpt_step}.csv')
     predict(estimator, train_examples, label_list, idx2label, tokenizer,
             train_tf_record_file_path,
             train_predicted_probs_file_path,
@@ -764,8 +777,10 @@ def main(_):
     # Dev set
     predict_examples = processor.get_dev_examples()
     dev_tf_record_file_path = os.path.join(output_dir, 'dev.tf_record')
-    dev_predicted_probs_file_path = os.path.join(output_dir, 'dev_probs.csv')
-    dev_predicted_label_file_path = os.path.join(output_dir, 'dev_predict.csv')
+    dev_predicted_probs_file_path = os.path.join(output_dir,
+                                                 f'dev_probs_{ckpt_step}.csv')
+    dev_predicted_label_file_path = os.path.join(output_dir,
+                                                 f'dev_predict_{ckpt_step}.csv')
     predict(estimator, predict_examples, label_list, idx2label, tokenizer,
             dev_tf_record_file_path,
             dev_predicted_probs_file_path,
@@ -774,8 +789,10 @@ def main(_):
     # Test set
     predict_examples = processor.get_test_examples()
     test_tf_record_file_path = os.path.join(output_dir, 'test.tf_record')
-    test_predicted_probs_file_path = os.path.join(output_dir, 'test_probs.csv')
-    test_predicted_label_file_path = os.path.join(output_dir, 'test_predict.csv')
+    test_predicted_probs_file_path = os.path.join(output_dir,
+                                                  f'test_probs_{ckpt_step}.csv')
+    test_predicted_label_file_path = os.path.join(output_dir,
+                                                  f'test_predict_{ckpt_step}.csv')
     predict(estimator, predict_examples, label_list, idx2label, tokenizer,
             test_tf_record_file_path,
             test_predicted_probs_file_path,
@@ -783,9 +800,11 @@ def main(_):
 
     
   if FLAGS.do_predict:
+    ckpt_step = training_config['CKPT_STEP']
     predict_examples = processor.get_test_examples()
     output_tf_record_file_path = os.path.join(output_dir, 'test.tf_record')
-    output_predicted_label_file_path = os.path.join(output_dir, 'test_predict.csv')
+    output_predicted_label_file_path = os.path.join(output_dir,
+                                                    f'test_predict_{ckpt_step}.csv')
     predict(estimator, predict_examples, label_list, idx2label, tokenizer,
             output_tf_record_file_path, output_predicted_label_file_path)
 
