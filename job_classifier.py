@@ -23,18 +23,19 @@ training_config = {}
 
 training_config['GLOBAL_SEED'] = 2019
 
-training_config['TRAINING_SESSION_NAME'] = 'drop04_lr03e-5_steps10_ls01'
+training_config['TRAINING_SESSION_NAME'] = 'drop04_l2-005_lr03e-5_steps10_ls01'
 
 training_config['DEBUGGING'] = False
 
 training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
 
-#training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
+training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
 
-training_config['CKPT_STEP'] = 8800
+#training_config['CKPT_STEP'] = 8800
 
-training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL17_B/outputs_drop04_lr03e-5_steps10_ls01/model.ckpt-{}.index'.format(training_config['CKPT_STEP'])
+#training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL17_B/outputs_drop04_lr03e-5_steps10_ls01/model.ckpt-{}.index'.format(training_config['CKPT_STEP'])
 
+training_config['L2_SCALE'] = 0.05
 training_config['OUTPUT_DROPOUT'] = 0.4    # Default: 0.1
 
 training_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
@@ -47,7 +48,7 @@ training_config['LEARNING_RATE'] = 3e-5    # Default: 5e-5
 
 training_config['NUM_TRAIN_EPOCHS'] = 10.0  # Default: 3.0
 
-training_config['WARMUP_PROPOTION'] = 0.1  # Default: 0.1
+training_config['WARMUP_PROPOTION'] = 1  # Default: 0.1
 
 training_config['LABEL_SMOOTHING'] = 0.1
 
@@ -465,9 +466,11 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   hidden_size = output_layer.shape[-1].value
 
+  l2_reg = tf.contrib.layers.l2_regularizer(training_config['L2_SCALE'])
   output_weights = tf.get_variable(
-      "output_weights", [num_labels, hidden_size],
-      initializer=tf.truncated_normal_initializer(stddev=0.02))
+    "output_weights", [num_labels, hidden_size],
+    initializer=tf.truncated_normal_initializer(stddev=0.02),
+    regularizer=l2_reg)
 
   output_bias = tf.get_variable(
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
@@ -491,6 +494,9 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
+
+    reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    loss += reg_loss
     return (loss, per_example_loss, logits, probabilities)
 
 
@@ -853,4 +859,3 @@ def main(_):
 if __name__ == "__main__":
   flags.mark_flag_as_required("session")
   tf.app.run()
-
