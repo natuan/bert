@@ -4,7 +4,8 @@ import pandas as pd
 import json
 from sklearn.model_selection import train_test_split
 from myutils import (get_job_texts,
-                     load_job_classification_dataset)
+                     load_job_classification_dataset,
+                     SentenceSwapper)
 from text_cleaner import TextCleaner
 
 
@@ -12,7 +13,7 @@ from text_cleaner import TextCleaner
 
 ROOT_DIR = os.path.join('/', 'home', 'tnguyen', 'src', 'bert')
 
-SESSION = 'JUL17_B'
+SESSION = 'AUG08'
 SESSION_DIR = os.path.join(ROOT_DIR, SESSION)
 
 CLEANER_CONFIG = {'punctuation': True,
@@ -23,6 +24,7 @@ CLEANER_CONFIG = {'punctuation': True,
 
 DELIMITER = '¥'
 
+PER_CLASS_MULTIPLY = 2
 TEST_SIZE = 0.2
 DEV_SIZE = 0.2
 STRATIFIED = True
@@ -39,6 +41,20 @@ def make_session():
         data['level1_id'] = y
         assert len(data['job_id']) == len(data['job_text']) == len(data['level1_id'])
         return pd.DataFrame(data=data)
+
+    def _make_augmented_df(X, y, data_augmenter=None):
+        frames = []
+        for idx in range(PER_CLASS_MULTIPLY):
+            data = {}
+            data['job_id'] = [f'{job_id}_{idx}' for job_id in X]
+            data['job_text'] = get_job_texts(X,
+                                             delimiter=config['delimiter'],
+                                             data_augmenter=data_augmenter,
+                                             text_cleaner=TextCleaner(config['cleaner_config']))
+            data['level1_id'] = y
+            assert len(data['job_id']) == len(data['job_text']) == len(data['level1_id'])
+            frames.append(pd.DataFrame(data=data))
+        return pd.concat(frames, ignore_index=True)
 
     config = get_session_info()
     assert not os.path.exists(config['session_dir'])
@@ -61,8 +77,10 @@ def make_session():
     #     y_test = y_test.iloc[:n]
 
     #     print('<<<<<<<')
-    
-    train_df = _make_df(X_train, y_train)
+
+    data_augmenter = SentenceSwapper()
+    train_df = _make_augmented_df(X_train, y_train, data_augmenter=data_augmenter)
+
     dev_df = _make_df(X_dev, y_dev)
     test_df = _make_df(X_test, y_test)
     train_df.to_csv(os.path.join(config['session_dir'], 'train.csv'), index=False)
@@ -81,6 +99,7 @@ def get_session_info():
             'session_dir': SESSION_DIR,
             'cleaner_config': CLEANER_CONFIG,
             'delimiter': DELIMITER,
+            'per_class_multiply': PER_CLASS_MULTIPLY,
             'test_size': TEST_SIZE,
             'dev_size': DEV_SIZE,
             'stratified': STRATIFIED,

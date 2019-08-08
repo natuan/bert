@@ -19,88 +19,94 @@ from session import get_session_info
 ##################### CONFIGURATION FOR JOB CLASSIFICATION #####################
 config = get_session_info()
 
-training_config = {}
+default_config = {}
 
-training_config['GLOBAL_SEED'] = 2019
+default_config['GLOBAL_SEED'] = 2019
 
-training_config['TRAINING_SESSION_NAME'] = 'drop04_l2-005_lr03e-5_steps10_ls01'
+default_config['DEBUGGING'] = False
 
-training_config['DEBUGGING'] = False
+default_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
 
-training_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
+default_config['INIT_CHECKPOINT'] = os.path.join(default_config['BERT_BASE_DIR'], 'bert_model.ckpt')
 
-training_config['INIT_CHECKPOINT'] = os.path.join(training_config['BERT_BASE_DIR'], 'bert_model.ckpt')
+default_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
 
-#training_config['CKPT_STEP'] = 8800
+default_config['TRAIN_BATCH_SIZE'] = 10   # max_seq_length 512: train_batch_size <= 10.
+default_config['EVAL_BATCH_SIZE'] = 8     # Default: 8
+default_config['PREDICT_BATCH_SIZE'] = 8  # Default: 8
 
-#training_config['INIT_CHECKPOINT'] = '/home/tnguyen/src/bert/JUL17_B/outputs_drop04_lr03e-5_steps10_ls01/model.ckpt-{}.index'.format(training_config['CKPT_STEP'])
-
-training_config['L2_SCALE'] = 0.05
-training_config['OUTPUT_DROPOUT'] = 0.4    # Default: 0.1
-
-training_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
-
-training_config['TRAIN_BATCH_SIZE'] = 10   # max_seq_length 512: train_batch_size <= 10.
-training_config['EVAL_BATCH_SIZE'] = 8     # Default: 8
-training_config['PREDICT_BATCH_SIZE'] = 8  # Default: 8
-
-training_config['LEARNING_RATE'] = 3e-5    # Default: 5e-5
-
-training_config['NUM_TRAIN_EPOCHS'] = 10.0  # Default: 3.0
-
-training_config['WARMUP_PROPOTION'] = 1  # Default: 0.1
-
-training_config['LABEL_SMOOTHING'] = 0.1
+default_config['WARMUP_PROPORTION'] = 1    # Default: 0.1 (i.e. 10% of training size)
 
 # The evaluation will also be done every of the below checkpoint steps
 # I chose 4000 because it's about the number of development data points
-training_config['SAVE_CHECKPOINTS_STEPS'] = int(4000/training_config['TRAIN_BATCH_SIZE'])
+default_config['SAVE_CHECKPOINTS_STEPS'] = int(4000/default_config['TRAIN_BATCH_SIZE'])
 
-training_config['ITERATIONS_PER_LOOP'] = 1000  # Default: 1000
+default_config['ITERATIONS_PER_LOOP'] = 1000  # Default: 1000
 
-training_config['SHUFFLE_BUFFER_SIZE'] = 10099  # Equal the training set size
+default_config['SHUFFLE_BUFFER_SIZE'] = None  # To be updated with the training set size
 
-training_config['LR_POLY_DECAY'] = {'name': 'polynomial_decay',
-                                    'active': True,
-                                    'decay_steps': None,  # TO BE UPDATED
-                                    'end_learning_rate': 0.0,
-                                    'power': 1.0,
-                                    'cycle': False}
+default_config['LR_POLY_DECAY'] = {'name': 'polynomial_decay',
+                                   'active': True,
+                                   'decay_steps': None,  # TO BE UPDATED
+                                   'end_learning_rate': 0.0,
+                                   'power': 1.0,
+                                   'cycle': False}
 
-training_config['LR_PIECEWISE_CONST_DECAY'] = {'name': 'piecewise_constant_decay',
-                                               'active': False,
-                                               'boundaries': [2000, 3500],
-                                               'values': [5e-5, 5e-6, 5e-7]}
+default_config['LR_PIECEWISE_CONST_DECAY'] = {'name': 'piecewise_constant_decay',
+                                              'active': False,
+                                              'boundaries': [2000, 3500],
+                                              'values': [5e-5, 5e-6, 5e-7]}
 
 #################################################################################
 
-tf.random.set_random_seed(training_config['GLOBAL_SEED'])
+tf.random.set_random_seed(default_config['GLOBAL_SEED'])
 
 flags = tf.flags
 
 FLAGS = flags.FLAGS
 
 ## Required parameters
+flags.DEFINE_string("session", None, "The session name.")
 
+flags.DEFINE_float("output_drop_rate", None, "Dropout rate of the output layer.")
+
+flags.DEFINE_float("l2_scale", None, "Scale of L2 regularizer.")
+
+flags.DEFINE_float("learning_rate", None, "The initial learning rate for Adam.")
+
+flags.DEFINE_float("label_smoothing", None, "Label smoothing.")
+
+flags.DEFINE_float("num_train_epochs", None,
+                   "Total number of training epochs to perform.")
+
+## Parameters inheritted from default config
 flags.DEFINE_string(
-    "session", None, "The session name.")
-
-## Other parameters
-
-flags.DEFINE_string(
-    "init_checkpoint", training_config['INIT_CHECKPOINT'],
+    "init_checkpoint", default_config['INIT_CHECKPOINT'],
     "Initial checkpoint (usually from a pre-trained BERT model).")
 
+flags.DEFINE_integer(
+    "max_seq_length", default_config['MAX_SEQ_LENGTH'],
+    "The maximum total input sequence length after WordPiece tokenization. "
+    "Sequences longer than this will be truncated, and sequences shorter "
+    "than this will be padded.")
+
+flags.DEFINE_integer("train_batch_size", default_config['TRAIN_BATCH_SIZE'], "Total batch size for training.")
+
+flags.DEFINE_integer("eval_batch_size", default_config['EVAL_BATCH_SIZE'], "Total batch size for eval.")
+
+flags.DEFINE_integer("predict_batch_size", default_config['PREDICT_BATCH_SIZE'], "Total batch size for predict.")
+
+flags.DEFINE_float(
+    "warmup_proportion", default_config['WARMUP_PROPORTION'],
+    "Proportion of training to perform linear learning rate warmup for. "
+    "E.g., 0.1 = 10% of training.")
+
+
+## Other parameters
 flags.DEFINE_bool(
     "do_lower_case", True,
     "Whether to lower case the input text. Should be True for uncased "
     "models and False for cased models.")
-
-flags.DEFINE_integer(
-    "max_seq_length", training_config['MAX_SEQ_LENGTH'],
-    "The maximum total input sequence length after WordPiece tokenization. "
-    "Sequences longer than this will be truncated, and sequences shorter "
-    "than this will be padded.")
 
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
@@ -110,26 +116,10 @@ flags.DEFINE_bool(
     "do_predict", False,
     "Whether to run the model in inference mode on the test set.")
 
-flags.DEFINE_integer("train_batch_size", training_config['TRAIN_BATCH_SIZE'], "Total batch size for training.")
-
-flags.DEFINE_integer("eval_batch_size", training_config['EVAL_BATCH_SIZE'], "Total batch size for eval.")
-
-flags.DEFINE_integer("predict_batch_size", training_config['PREDICT_BATCH_SIZE'], "Total batch size for predict.")
-
-flags.DEFINE_float("learning_rate", training_config['LEARNING_RATE'], "The initial learning rate for Adam.")
-
-flags.DEFINE_float("num_train_epochs", training_config['NUM_TRAIN_EPOCHS'],
-                   "Total number of training epochs to perform.")
-
-flags.DEFINE_float(
-    "warmup_proportion", training_config['WARMUP_PROPOTION'],
-    "Proportion of training to perform linear learning rate warmup for. "
-    "E.g., 0.1 = 10% of training.")
-
-flags.DEFINE_integer("save_checkpoints_steps", training_config['SAVE_CHECKPOINTS_STEPS'],
+flags.DEFINE_integer("save_checkpoints_steps", default_config['SAVE_CHECKPOINTS_STEPS'],
                      "How often to save the model checkpoint.")
 
-flags.DEFINE_integer("iterations_per_loop", training_config['ITERATIONS_PER_LOOP'],
+flags.DEFINE_integer("iterations_per_loop", default_config['ITERATIONS_PER_LOOP'],
                      "How many steps to make in each estimator call.")
 
 flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
@@ -157,6 +147,38 @@ tf.flags.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
 flags.DEFINE_integer(
     "num_tpu_cores", 8,
     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
+
+
+def get_training_config():
+  """
+  Training params that need to be saved
+  """
+  conf = default_config  
+  conf['output_drop_rate'] = FLAGS.output_drop_rate
+  conf['l2_scale'] = FLAGS.l2_scale
+  conf['learning_rate'] = FLAGS.learning_rate
+  conf['label_smoothing'] = FLAGS.label_smoothing
+  conf['num_train_epochs'] = FLAGS.num_train_epochs
+  return conf
+
+
+def save_training_config(training_config_file_path):
+  conf = get_training_config()
+  with open(training_config_file_path, 'w') as f:
+    json.dump(conf, f)
+
+
+def training_config_string():
+  conf = get_training_config()
+  code_map = collections.OrderedDict()
+  code_map['output_drop_rate'] = 'dr'
+  code_map['l2_scale'] = 'l2'
+  code_map['label_smoothing'] = 'ls'
+  code_map['learning_rate'] = 'lr'
+  code_map['num_train_epochs'] = 'ep'
+  
+  s = '_'.join([f'{code_map[k]}:{conf[k]}' for k in code_map])
+  return s
 
 
 class InputExample(object):
@@ -234,7 +256,7 @@ class JobProcessor:
     csv_file_path = os.path.join(config['session_dir'], f'{set_type}.csv')
     df = pd.read_csv(csv_file_path)
 
-    if training_config['DEBUGGING']:
+    if default_config['DEBUGGING']:
       df = df.iloc[:500]
 
     examples = []
@@ -414,9 +436,13 @@ def file_based_input_fn_builder(input_file, seq_length, is_training,
     # For eval, we want no shuffling and parallel reading doesn't matter.
     d = tf.data.TFRecordDataset(input_file)
     if is_training:
-      d = d.repeat()
+      # tnguyen: change the default code to do shuffling before repeating
+      # Reference: https://www.tensorflow.org/guide/performance/datasets#repeat_and_shuffle
+
       # tnguyen: see https://www.tensorflow.org/api_docs/python/tf/data/TFRecordDataset#shuffle
-      d = d.shuffle(buffer_size=training_config['SHUFFLE_BUFFER_SIZE'])
+      d = d.shuffle(buffer_size=default_config['SHUFFLE_BUFFER_SIZE'])
+      
+      d = d.repeat()
 
     d = d.apply(
         tf.contrib.data.map_and_batch(
@@ -466,19 +492,21 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
   hidden_size = output_layer.shape[-1].value
 
-  l2_reg = tf.contrib.layers.l2_regularizer(training_config['L2_SCALE'])
+  #l2_reg = tf.contrib.layers.l2_regularizer(FLAGS.l2_scale)
   output_weights = tf.get_variable(
     "output_weights", [num_labels, hidden_size],
     initializer=tf.truncated_normal_initializer(stddev=0.02),
-    regularizer=l2_reg)
+    #regularizer=l2_reg
+  )
 
   output_bias = tf.get_variable(
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
-  with tf.variable_scope("loss"):
+  vs_name = "train_loss" if is_training else "dev_loss"
+  with tf.variable_scope(vs_name):
     if is_training:
       # Dropout
-      output_layer = tf.nn.dropout(output_layer, keep_prob=(1.0 - training_config['OUTPUT_DROPOUT']))
+      output_layer = tf.nn.dropout(output_layer, rate=FLAGS.output_drop_rate)
 
     logits = tf.matmul(output_layer, output_weights, transpose_b=True)
     logits = tf.nn.bias_add(logits, output_bias)
@@ -486,17 +514,17 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     log_probs = tf.nn.log_softmax(logits, axis=-1)
 
     one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
-    label_smoothing = training_config['LABEL_SMOOTHING']
-    if label_smoothing > 0:
-      smooth_positives = 1.0 - label_smoothing
-      smooth_negatives = label_smoothing / num_labels
+    if FLAGS.label_smoothing > 0:
+      smooth_positives = 1.0 - FLAGS.label_smoothing
+      smooth_negatives = FLAGS.label_smoothing / num_labels
       one_hot_labels = one_hot_labels * smooth_positives + smooth_negatives
 
     per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
     loss = tf.reduce_mean(per_example_loss)
 
-    reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-    loss += reg_loss
+    # reg_loss = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+    # loss += reg_loss
+
     return (loss, per_example_loss, logits, probabilities)
 
 
@@ -645,7 +673,7 @@ def main(_):
     raise ValueError(
         "At least one of `do_train`, `do_eval` or `do_predict' must be True.")
 
-  bert_config_file = os.path.join(training_config['BERT_BASE_DIR'], 'bert_config.json')
+  bert_config_file = os.path.join(default_config['BERT_BASE_DIR'], 'bert_config.json')
   bert_config = modeling.BertConfig.from_json_file(bert_config_file)
 
   if FLAGS.max_seq_length > bert_config.max_position_embeddings:
@@ -654,21 +682,21 @@ def main(_):
         "was only trained up to sequence length %d" %
         (FLAGS.max_seq_length, bert_config.max_position_embeddings))
 
-  output_dir = os.path.join(config['session_dir'], f"outputs_{training_config['TRAINING_SESSION_NAME']}")
+  training_session_name = training_config_string()
+  output_dir = os.path.join(config['session_dir'], f'{training_session_name}')
   if FLAGS.do_train:
     assert not os.path.exists(output_dir)
     tf.gfile.MakeDirs(output_dir)
 
   train_config_file_path = os.path.join(output_dir, 'training_config.json')
-  with open(train_config_file_path, 'w') as f:
-    json.dump(training_config, f)
+  save_training_config(train_config_file_path)
 
   processor = JobProcessor()
 
   label_list = processor.get_labels()
   idx2label = {idx: label for idx, label in enumerate(label_list)}
   
-  vocab_file = os.path.join(training_config['BERT_BASE_DIR'], 'vocab.txt')
+  vocab_file = os.path.join(default_config['BERT_BASE_DIR'], 'vocab.txt')
   tokenizer = tokenization.FullTokenizer(
       vocab_file=vocab_file, do_lower_case=FLAGS.do_lower_case)
 
@@ -676,7 +704,7 @@ def main(_):
   if FLAGS.use_tpu and FLAGS.tpu_name:
     tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
         FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
-  
+
   is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
@@ -689,18 +717,19 @@ def main(_):
           per_host_input_for_training=is_per_host))
 
   train_examples = processor.get_train_examples()
+  default_config['SHUFFLE_BUFFER_SIZE'] = len(train_examples)
   num_train_steps = int(
     len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
   num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
   lr_decay_config = None
-  if training_config['LR_POLY_DECAY']['active']:
-    training_config['LR_POLY_DECAY']['decay_steps'] = num_train_steps
-    lr_decay_config = training_config['LR_POLY_DECAY']
-  elif training_config['LR_PIECEWISE_CONST_DECAY']['active']:
-    assert training_config['LR_PIECEWISE_CONST_DECAY']['values'][0] == \
-      training_config['LEARNING_RATE']
-    lr_decay_config = training_config['LR_PIECEWISE_CONST_DECAY']
+  if default_config['LR_POLY_DECAY']['active']:
+    default_config['LR_POLY_DECAY']['decay_steps'] = num_train_steps
+    lr_decay_config = default_config['LR_POLY_DECAY']
+  elif default_config['LR_PIECEWISE_CONST_DECAY']['active']:
+    assert default_config['LR_PIECEWISE_CONST_DECAY']['values'][0] == \
+      FLAGS.learning_rate
+    lr_decay_config = default_config['LR_PIECEWISE_CONST_DECAY']
   else:
     assert False, 'Must specify a decay strategy'
 
@@ -735,6 +764,7 @@ def main(_):
         seq_length=FLAGS.max_seq_length,
         is_training=True,
         drop_remainder=True)
+
     train_spec = tf.estimator.TrainSpec(
       input_fn=train_input_fn,
       max_steps=num_train_steps)
@@ -756,9 +786,14 @@ def main(_):
       output_dir=output_dir,
       scaffold=tf.train.Scaffold(summary_op=tf.summary.merge_all()))
 
+    # best_exporter = tf.estimator.BestExporter(
+    #   compare_fn=_loss_smaller,
+    #   exports_to_keep=2)
+    
     eval_spec = tf.estimator.EvalSpec(
       input_fn=eval_input_fn,
       hooks=[eval_summary_hook],
+      #exporters=best_exporter,
       steps=len(eval_examples) / FLAGS.eval_batch_size,
       start_delay_secs=10,
       throttle_secs=120)
@@ -767,7 +802,7 @@ def main(_):
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
 
   if FLAGS.do_eval:
-    ckpt_step = training_config['CKPT_STEP']
+    ckpt_step = default_config['CKPT_STEP']
     # Training set
     train_examples = processor.get_train_examples()
     train_tf_record_file_path = os.path.join(output_dir, 'train.tf_record')
@@ -806,7 +841,7 @@ def main(_):
 
     
   if FLAGS.do_predict:
-    ckpt_step = training_config['CKPT_STEP']
+    ckpt_step = default_config['CKPT_STEP']
     predict_examples = processor.get_test_examples()
     output_tf_record_file_path = os.path.join(output_dir, 'test.tf_record')
     output_predicted_label_file_path = os.path.join(output_dir,
@@ -850,9 +885,8 @@ def main(_):
         num_written_lines += 1
     assert num_written_lines == num_actual_predict_examples
 
-  print('******  TRAINING SESSION {} COMPLETES ******'.
-        format(training_config['TRAINING_SESSION_NAME']))
-  if training_config['DEBUGGING']:
+  print(f'******  TRAINING SESSION {training_session_name} COMPLETES ******')
+  if default_config['DEBUGGING']:
     print('WARNING: DEBUGGING MODE IS ACTIVE')
 
 
