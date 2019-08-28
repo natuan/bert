@@ -1,0 +1,191 @@
+cluster_group|category_name|sub_category_name|created_at|category_id
+182|Human Resources|HR Recruiting|2018-08-23 15:58:06.4664|1
+13|Human Resources|Human Resources|2018-08-23 15:58:03.578951|1
+61|Human Resources|Recruiting|2018-08-23 15:58:06.079065|1
+183|Human Resources|Technical Recruiting|2018-08-23 15:58:06.781197|1
+114|Protective Services|Security Services|2018-08-23 15:58:07.171192|2
+30|Legal and Regulatory|Legal Services|2018-08-23 15:58:07.493711|3
+103|Creative, Design, Art and Performer|Copy Writing|2018-08-23 15:58:08.920579|4
+74|Creative, Design, Art and Performer|Graphic Designing|2018-08-23 15:58:07.790142|4
+134|Creative, Design, Art and Performer|Interior Designing|2018-08-23 15:58:09.231738|4
+86|Creative, Design, Art and Performer|Product Designing|2018-08-23 15:58:08.416669|4
+149|Creative, Design, Art and Performer|Technical Writing|2018-08-23 15:58:09.851068|4
+83|Creative, Design, Art and Performer|Technical Writing|2018-08-23 15:58:08.110097|4
+152|Creative, Design, Art and Performer|User Experience Designing|2018-08-23 15:58:10.310114|4
+96|Purchasing and Procurement|Contract & Commercial Management|2018-08-23 15:58:10.962882|5
+32|Purchasing and Procurement|Procurement Management|2018-08-23 15:58:10.629738|5
+18|Healthcare Support|Clinical Coordinator|2018-08-23 15:58:11.602149|6
+7|Healthcare Support|Clinical Management|2018-08-23 15:58:11.284533|6
+158|Healthcare Support|Coding & Auditing|2018-08-23 15:58:15.538864|6
+162|Healthcare Support|Dentistry|2018-08-23 15:58:15.863819|6
+135|Healthcare Support|Health Information Management|2018-08-23 15:58:14.343591|6
+68|Healthcare Support|Healthcare Management|2018-08-23 15:58:12.768412|6
+100|Healthcare Support|Medical Administration|2018-08-23 15:58:13.675034|6
+66|Healthcare Support|Medical Insurance|2018-08-23 15:58:12.357567|6
+54|Healthcare Support|Medical Record Keeping|2018-08-23 15:58:12.038021|6
+92|Healthcare Support|Medical Technology|2018-08-23 15:58:13.120781|6
+142|Healthcare Support|Physical Therapy|2018-08-23 15:58:15.218867|6
+140|Healthcare Support|Pre-Clinical Project Management|2018-08-23 15:58:14.682884|6
+126|Healthcare Support|Regulatory Affairs Programs Management|2018-08-23 15:58:13.994371|6
+44|Healthcare Practitioners|Internal Medicine |2018-08-23 15:58:24.482403|7
+35|Healthcare Practitioners|Medical Assistance|2018-08-23 15:58:24.13728|7
+136|Healthcare Practitioners|Mental Health Specialization|2018-08-23 15:58:25.606552|7
+1|Healthcare Practitioners|Nursing|2018-08-23 15:58:16.218867|7
+78|Healthcare Practitioners|Pharmaceutical|2018-08-23 15:58:24.809175|7
+25|Healthcare Practitioners|Physical Theraphy|2018-08-23 15:58:23.75975|7
+189|Healthcare Practitioners|Speech Therapy|2018-08-23 15:58:25.946889|7
+82|Healthcare Practitioners|Surgery|2018-08-23 15:58:25.278827|7
+14|Marketing|Marketing|2018-08-23 15:58:26.534113|9
+19|Marketing|eCommerce Management|2018-08-23 15:58:26.874121|9
+11|Finance and Accounting|Accounting|2018-08-23 15:58:27.220435|10
+47|Finance and Accounting|Collections Representative |2018-08-23 15:58:28.780488|10
+105|Finance and Accounting|Compliance|2018-08-23 15:58:29.130388|10
+15|Finance and Accounting|Financial Analysis|2018-08-23 15:58:27.569248|10
+16|Finance and Accounting|Financial Services|2018-08-23 15:58:27.986889|10
+159|Finance and Accounting|Internal Auditing|2018-08-23 15:58:30.548174|10
+160|Finance and Accounting|Internal Auditing|2018-08-23 15:58:30.985254|10
+42|Finance and Accounting|Investment Consulting|2018-08-23 15:58:28.448674|10
+106|Finance and Accounting|Mortgage Management|2018-08-23 15:58:29.481381|10
+123|Finance and Accounting|Staff Auditing|2018-08-23 15:58:30.19885|10
+116|Finance and Accounting|Tax Accounting|2018-08-23 15:58:29.822077|10
+10|Office and Administrative|Administrative Assistantance|2018-08-23 15:58:31.420626|11
+99|Office and Administrative|Administrative Assitant|2018-08-23 15:58:32.270935|11
+72|Office and Administrative|Executive Assistance|2018-08-23 15:58:31.928951|11
+121|Office and Administrative|Legal Administration |2018-08-23 15:58:32.628681|11
+151|Office and Administrative|Translation Services|2018-08-23 15:58:32.978898|11
+80|Communications and PR/Advertising|Communications Management|2018-08-23 15:58:33.958853|12
+71|Communications and PR/Advertising|Event Planning and Management|2018-08-23 15:58:33.48365|12
+46|Scientific Research|Biotechnology|2018-08-23 15:58:34.694902|13
+36|Scientific Research|Clinical Research|2018-08-23 15:58:34.29364|13
+167|Scientific Research|Environmental Science|2018-08-23 15:58:35.850153|13
+109|Scientific Research|Laboratory Assistant|2018-08-23 15:58:35.521346|13
+172|Scientific Research|Military Communications|2018-08-23 15:58:36.212592|13
+185|Scientific Research|Pharma Scientist|2018-08-23 15:58:36.769193|13
+91|Scientific Research|Research Investigation|2018-08-23 15:58:35.05744|13
+63|Transportation, Warehouse and Logistics|Driving|2018-08-23 15:58:38.317344|14
+146|Transportation, Warehouse and Logistics|Driving |2018-08-23 15:58:39.125697|14
+178|Transportation, Warehouse and Logistics|Occupational Safety Training|2018-08-23 15:58:39.877914|14
+175|Transportation, Warehouse and Logistics|Ship Operations|2018-08-23 15:58:39.507754|14
+57|Transportation, Warehouse and Logistics|Sourcing|2018-08-23 15:58:37.646328|14
+81|Transportation, Warehouse and Logistics|Supply Chain Management|2018-08-23 15:58:38.67806|14
+8|Transportation, Warehouse and Logistics|Warehouse Personnel|2018-08-23 15:58:37.154838|14
+33|Trade, Construction and Maintenance|Construction|2018-08-23 15:58:40.406824|15
+173|Trade, Construction and Maintenance|Electrical & Mechanical Maintenance|2018-08-23 15:58:42.99187|15
+38|Trade, Construction and Maintenance|Electrician|2018-08-23 15:58:40.792722|15
+107|Trade, Construction and Maintenance|House Keeping|2018-08-23 15:58:42.635953|15
+58|Trade, Construction and Maintenance|Maintenance|2018-08-23 15:58:42.180451|15
+40|Trade, Construction and Maintenance|Maintenance|2018-08-23 15:58:41.151605|15
+49|Trade, Construction and Maintenance|Mechanic|2018-08-23 15:58:41.722069|15
+191|Trade, Construction and Maintenance|Telecommunications|2018-08-23 15:58:43.515396|15
+39|Community and Social Services|Assisted Living Management|2018-08-23 15:58:43.860676|16
+171|Community and Social Services|Hospital Management|2018-08-23 15:58:44.728382|16
+184|Community and Social Services|Religious Services|2018-08-23 15:58:45.119631|16
+62|Community and Social Services|Social Services|2018-08-23 15:58:44.352886|16
+124|Retail Sales|Automotive Sales|2018-08-23 15:58:46.650069|17
+165|Retail Sales|Food Supply|2018-08-23 15:58:48.32773|17
+45|Retail Sales|Merchandising|2018-08-23 15:58:45.507016|17
+94|Retail Sales|Retail Sales Rep|2018-08-23 15:58:46.262079|17
+186|Retail Sales|Retail Services|2018-08-23 15:58:48.706765|17
+93|Retail Sales|Sales Assistance|2018-08-23 15:58:45.874909|17
+163|Retail Sales|Sales Automotive|2018-08-23 15:58:47.478899|17
+164|Retail Sales|Sales Chemical|2018-08-23 15:58:47.927715|17
+129|Retail Sales|Sales Telecom|2018-08-23 15:58:47.106324|17
+111|IT and Computer|.Net Development|2018-08-23 15:58:55.578868|18
+85|IT and Computer|Business Intelligence Development|2018-08-23 15:58:53.994811|18
+28|IT and Computer|Cyber Security|2018-08-23 15:58:51.441399|18
+12|IT and Computer|Database Development|2018-08-23 15:58:50.255607|18
+170|IT and Computer|Firmware Programming|2018-08-23 15:58:58.718179|18
+132|IT and Computer|Game Development|2018-08-23 15:58:57.110828|18
+122|IT and Computer|IT Auditing|2018-08-23 15:58:56.620065|18
+20|IT and Computer|IT Project Management|2018-08-23 15:58:50.642027|18
+52|IT and Computer|Manufacturing Engineering|2018-08-23 15:58:52.415647|18
+90|IT and Computer|Mobile App Development|2018-08-23 15:58:54.480552|18
+157|IT and Computer|Network Engineering|2018-08-23 15:58:58.190011|18
+24|IT and Computer|Network Engineering|2018-08-23 15:58:51.057289|18
+145|IT and Computer|Salesforce Development|2018-08-23 15:58:57.580742|18
+95|IT and Computer|Sharepoint Analysis |2018-08-23 15:58:54.960774|18
+5|IT and Computer|Software Architecture|2018-08-23 15:58:49.093972|18
+6|IT and Computer|Software Engineering|2018-08-23 15:58:49.469983|18
+55|IT and Computer|Software Quality Assurance|2018-08-23 15:58:52.91323|18
+9|IT and Computer|Systems Administration|2018-08-23 15:58:49.869373|18
+34|IT and Computer|Systems Engineering|2018-08-23 15:58:51.95486|18
+188|IT and Computer|Technical Architecture|2018-08-23 15:58:59.257266|18
+118|IT and Computer|Virtualization|2018-08-23 15:58:56.142055|18
+56|IT and Computer|Web Development|2018-08-23 15:58:53.406782|18
+17|Consulting|Business Analysis|2018-08-23 15:59:00.241691|19
+65|Consulting|Business Analysis|2018-08-23 15:59:01.825646|19
+104|Consulting|Cost Specialization |2018-08-23 15:59:02.877308|19
+3|Consulting|Customer Service Technical Support|2018-08-23 15:58:59.741062|19
+143|Consulting|Data Analysis|2018-08-23 15:59:04.119727|19
+41|Consulting|Data Analysis|2018-08-23 15:59:00.818814|19
+125|Consulting|Healthcare Analysis|2018-08-23 15:59:03.473262|19
+50|Consulting|Marketing Analysis|2018-08-23 15:59:01.303639|19
+101|Consulting|Mergers & Acquisitions|2018-08-23 15:59:02.306038|19
+179|Consulting|Operations Analysis|2018-08-23 15:59:04.612075|19
+64|Sales and Business Development|Account Executive|2018-08-23 15:59:08.046892|20
+97|Sales and Business Development|Business Development Management|2018-08-23 15:59:10.198859|20
+26|Sales and Business Development|Clinical Sales|2018-08-23 15:59:07.060531|20
+187|Sales and Business Development|Community Relations - Sales|2018-08-23 15:59:28.618065|20
+67|Sales and Business Development|Contract Proposal Management|2018-08-23 15:59:08.673287|20
+115|Sales and Business Development|Coorporate Stratergy Management|2018-08-23 15:59:11.320513|20
+190|Sales and Business Development|Corporate Strategy|2018-08-23 15:59:29.224505|20
+181|Sales and Business Development|Customer Experience Education|2018-08-23 15:59:28.199752|20
+147|Sales and Business Development|Lean Six Sigma Black Belt|2018-08-23 15:59:14.769228|20
+144|Sales and Business Development|Manufacturing Parts Sales|2018-08-23 15:59:14.293489|20
+155|Sales and Business Development|Medical Insurance Accounting|2018-08-23 15:59:26.335027|20
+4|Sales and Business Development|Sales & Business Development|2018-08-23 15:59:05.811728|20
+98|Sales and Business Development|Sales Account Management|2018-08-23 15:59:10.686103|20
+148|Sales and Business Development|Sales Consultant IT|2018-08-23 15:59:22.022015|20
+156|Sales and Business Development|Sales DOD|2018-08-23 15:59:27.3174|20
+128|Sales and Business Development|Sales Equipment|2018-08-23 15:59:13.811057|20
+119|Sales and Business Development|Sales Financial|2018-08-23 15:59:12.041731|20
+154|Sales and Business Development|Sales IT|2018-08-23 15:59:23.05333|20
+29|Sales and Business Development|Sales Insurance|2018-08-23 15:59:07.57325|20
+120|Sales and Business Development|Sales Legal|2018-08-23 15:59:12.550049|20
+2|Sales and Business Development|Sales Management|2018-08-23 15:59:05.138843|20
+76|Sales and Business Development|Sales Management|2018-08-23 15:59:09.726056|20
+153|Sales and Business Development|Sales Manufacturing|2018-08-23 15:59:22.546297|20
+127|Sales and Business Development|Sales Manufacturing|2018-08-23 15:59:13.106816|20
+166|Sales and Business Development|Sales Pharma|2018-08-23 15:59:27.785174|20
+75|Sales and Business Development|Sales Technology|2018-08-23 15:59:09.203691|20
+21|Sales and Business Development|Vendor Management|2018-08-23 15:59:06.425303|20
+84|Engineering|Aviation|2018-08-23 15:59:35.199585|21
+137|Engineering|Chemical Engineering|2018-08-23 15:59:36.435506|21
+102|Engineering|Chemical Engineering|2018-08-23 15:59:36.00543|21
+161|Engineering|Civil Engineering |2018-08-23 15:59:41.049277|21
+48|Engineering|Electrical Engineering|2018-08-23 15:59:34.114205|21
+79|Engineering|Energy Engineering|2018-08-23 15:59:34.76286|21
+89|Engineering|Hardware Engineering|2018-08-23 15:59:35.602741|21
+43|Engineering|Integration Engineering|2018-08-23 15:59:33.491583|21
+23|Engineering|Mechanical Engineering|2018-08-23 15:59:29.718818|21
+174|Engineering|Mining Engineering|2018-08-23 15:59:41.679441|21
+139|Engineering|Petrochemicals|2018-08-23 15:59:36.859626|21
+169|Real Estate and Property Management|Property Appraisal Control|2018-08-23 15:59:43.1434|22
+108|Real Estate and Property Management|Property Insurance|2018-08-23 15:59:42.190764|22
+141|Real Estate and Property Management|Property Management|2018-08-23 15:59:42.674249|22
+180|Education and Instruction|Fitness Training|2018-08-23 15:59:45.272686|23
+37|Education and Instruction|Medical Training|2018-08-23 15:59:43.754801|23
+69|Education and Instruction|Nursing Teaching|2018-08-23 15:59:44.256491|23
+150|Education and Instruction|Training|2018-08-23 15:59:44.747596|23
+27|Customer and Personal Service|Client Service Management|2018-08-23 15:59:46.276406|24
+22|Customer and Personal Service|Customer Service Representative|2018-08-23 15:59:45.800721|24
+133|Customer and Personal Service|Hospitality|2018-08-23 15:59:47.287591|24
+117|Customer and Personal Service|Travel Coordinator|2018-08-23 15:59:46.773557|24
+53|Manufacturing and Operations|Engineering Project Management|2018-08-23 15:59:48.910156|25
+112|Manufacturing and Operations|Environmental Safety & Health Management|2018-08-23 15:59:51.835132|25
+110|Manufacturing and Operations|Machining|2018-08-23 15:59:51.174212|25
+70|Manufacturing and Operations|Manufactuing Administration|2018-08-23 15:59:50.688941|25
+31|Manufacturing and Operations|Manufacturing QA|2018-08-23 15:59:47.826514|25
+59|Manufacturing and Operations|Manufacturing Quality Assurance|2018-08-23 15:59:49.401385|25
+168|Manufacturing and Operations|Manufacturing Site Management|2018-08-23 15:59:53.320628|25
+177|Manufacturing and Operations|Occupational Safety|2018-08-23 15:59:53.823703|25
+138|Manufacturing and Operations|Operations Pharma|2018-08-23 15:59:52.832407|25
+51|Manufacturing and Operations|Process Engineering Operations|2018-08-23 15:59:48.419574|25
+60|Manufacturing and Operations|Production Management|2018-08-23 15:59:50.130774|25
+113|Manufacturing and Operations|Safety Engineering|2018-08-23 15:59:52.354777|25
+131|Food Preparation and Service|Food Production Management|2018-08-23 15:59:56.488544|26
+130|Food Preparation and Service|Food Safety Management|2018-08-23 15:59:55.91045|26
+176|Food Preparation and Service|Food Services|2018-08-23 15:59:56.959596|26
+88|Food Preparation and Service|Food Services Helper|2018-08-23 15:59:55.406843|26
+87|Food Preparation and Service|Food Services/Chef|2018-08-23 15:59:54.910899|26
+73|Food Preparation and Service|Restaurant Management|2018-08-23 15:59:54.315159|26
