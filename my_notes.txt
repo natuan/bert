@@ -41,6 +41,11 @@ Starts to overfit at around 10k steps --- the log loss of training set is around
 - New session JUL12_A created: the JUL06 has test.csv without full set of labels
 
 
->>>>>>>>>>>>>>>>>>>  SESSION: JUL12_A <<<<<<<<<<<<<<<<<<<<<
+>>>>>>>>>>>>>>>>>>>  SESSION: AUG09 <<<<<<<<<<
+- All classes are brought up to 2000 elements, unless they have more than 2000 elements
+- Augmentation was done by permutating first half of the sentences
+- Results are converged at around 80% accuracy
 
-- drop05_lr03e-5
+>>>>>>>>>>>>>>>>>>>  SESSION: AUG09_B <<<<<<<<<<
+
+- Same augmentation technique as AUG09, but applied only to class 20

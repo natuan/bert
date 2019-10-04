@@ -45,6 +45,7 @@ class TextCleaner(TransformerMixin):
         for doc in X:
             # get rid of html
             text = _remove_html(doc)
+            text = text.lower()
 
             # split into words
             tokens = word_tokenize(text)
@@ -63,6 +64,8 @@ class TextCleaner(TransformerMixin):
                 if debug:
                     print('Removed punctuation:')
                     print(stripped)
+            else:
+                stripped = tokens    
 
             if self._config['alphabetic']:
                 # remove remaining tokens that are not alphabetic

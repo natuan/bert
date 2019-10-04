@@ -1,11 +1,11 @@
 #!/bin/bash
 
-sessions=AUG08
-drop_rates=(0.1)
+sessions=AUG09_B
+drop_rates=(0.1 0.4)
 l2_scales=(0)
-learning_rates=(3e-05)
+learning_rates=(5e-05)
 label_smoothings=(0.1)
-epochs=(5)
+epochs=(10)
 
 for sess in ${sessions[*]}; do
 for drop in ${drop_rates[*]}; do
