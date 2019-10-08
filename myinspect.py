@@ -60,7 +60,7 @@ def job_title_description_stats():
 def main():
     MODEL_DIR = 'JUL17_B/outputs_drop04_lr03e-5_steps10_ls01'
     OUTPUT_DIR = os.path.join(MODEL_DIR, 'wrong_predictions')
-    label = 20
+    label = 6
     if not os.path.exists(OUTPUT_DIR):
         os.makedirs(OUTPUT_DIR)
     for set_type in ['train', 'dev', 'test']:
@@ -68,7 +68,7 @@ def main():
         create_wrong_prediction_csv(
             os.path.join(MODEL_DIR, f'{set_type}_predict_8800.csv'),
             label,
-            os.path.join(OUTPUT_DIR, f'{set_type}_wrong_predict_8800_label{label}_v02.csv'))
+            os.path.join(OUTPUT_DIR, f'{set_type}_wrong_predict_8800_label{label}.csv'))
         
     #job_title_description_stats()
 
