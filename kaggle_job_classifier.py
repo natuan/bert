@@ -29,8 +29,6 @@ default_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-76
 
 #default_config['INIT_CHECKPOINT'] = os.path.join(default_config['BERT_BASE_DIR'], 'bert_model.ckpt')
 
-default_config['INIT_CHECKPOINT'] = os.path.join('OCT_04', 'dr:0.1_l2:0.0_ls:0.0_lr:3e-05_ep:300.0', 'model.ckpt-302970')
-
 default_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
 
 default_config['TRAIN_BATCH_SIZE'] = 10   # max_seq_length 512: train_batch_size <= 10.

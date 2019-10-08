@@ -11,11 +11,11 @@ from text_cleaner import TextCleaner
 
 ROOT_DIR = os.path.join('/', 'home', 'tnguyen', 'src', 'bert')
 
-SESSION = 'OCT_02_B'
+SESSION = 'OCT_04'
 SESSION_DIR = os.path.join(ROOT_DIR, SESSION)
 
 CLEANER_CONFIG = {'punctuation': False,
-                  'alphabetic': True,
+                  'alphabetic': False,
                   'stop_words': False,
                   'stem_words': False,
                   'state_city': False}
