@@ -15,11 +15,15 @@ import numpy as np
 import pandas as pd
 from session import get_session_info
 
+from text_cleaner import TextCleaner
+
 
 ##################### CONFIGURATION FOR JOB CLASSIFICATION #####################
 config = get_session_info()
 
 default_config = {}
+
+default_config['SESSION'] = 'kaggle'
 
 default_config['GLOBAL_SEED'] = 2019
 
@@ -27,7 +31,7 @@ default_config['DEBUGGING'] = False
 
 default_config['BERT_BASE_DIR'] = os.path.join('base_models', 'uncased_L-12_H-768_A-12')
 
-#default_config['INIT_CHECKPOINT'] = os.path.join(default_config['BERT_BASE_DIR'], 'bert_model.ckpt')
+default_config['INIT_CHECKPOINT'] = os.path.join(default_config['BERT_BASE_DIR'], 'bert_model.ckpt')
 
 default_config['MAX_SEQ_LENGTH'] = 512    # Default: 128
 
@@ -66,7 +70,6 @@ flags = tf.flags
 FLAGS = flags.FLAGS
 
 ## Required parameters
-flags.DEFINE_string("session", None, "The session name.")
 
 flags.DEFINE_float("output_drop_rate", None, "Dropout rate of the output layer.")
 
@@ -80,6 +83,9 @@ flags.DEFINE_float("num_train_epochs", None,
                    "Total number of training epochs to perform.")
 
 ## Parameters inheritted from default config
+
+flags.DEFINE_string("session", default_config['SESSION'], "The session name.")
+
 flags.DEFINE_string(
     "init_checkpoint", default_config['INIT_CHECKPOINT'],
     "Initial checkpoint (usually from a pre-trained BERT model).")
@@ -231,7 +237,7 @@ class InputFeatures(object):
     self.is_real_example = is_real_example
 
 
-class JobProcessor:
+class KaggleJobProcessor:
   """
   Processor for Scout's jobs
   """
@@ -248,7 +254,7 @@ class JobProcessor:
   def get_labels(self):
     train_file_path = os.path.join(config['session_dir'], 'train.csv')
     df = pd.read_csv(train_file_path)
-    level1_ids = np.unique(df['level1_id'].values)
+    level1_ids = np.unique(df['category'].values)
     return level1_ids
 
   def _get_examples(self, set_type='train'):
@@ -260,11 +266,19 @@ class JobProcessor:
       df = df.iloc[:500]
 
     examples = []
-    for job_id, job_text, level1_id in zip(df['job_id'], df['job_text'], df['level1_id']):
+    config = get_session_info()
+    text_cleaner = TextCleaner(config)
+    transformed_titles = text_cleaner.transform(df['Title'])
+    transformed_descriptions = text_cleaner.transform(df['FullDescription'])
+    for job_id, title, description, category in zip(df['Id'],
+                                                    transformed_titles,
+                                                    transformed_descriptions,
+                                                    df['Category']):
       guid = job_id
+      job_text = title + ' ' + config['delimiter'] + ' ' + description
       text_a = tokenization.convert_to_unicode(job_text)
       text_b = None
-      label = level1_id
+      label = category
       examples.append(
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
